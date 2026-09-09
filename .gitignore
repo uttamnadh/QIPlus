@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+package-lock.json.backup
+
+# Test outputs & reports
+test-results/
+playwright-report/
+blob-report/
+allure-results/
+allure-report/
+*.log
+
+# Authentication states & secrets
+.auth/
+*.auth.json
+.env
+.env.local
+.env.*.local
+
+# Operating System & Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Scratch & temporary files
+scratch/
+temp/
+tmp/

@@ -1,0 +1,29 @@
+{
+  "name": "qiplus-e2e",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "wizard": "node run-wizard.js",
+    "test:wizard": "node run-wizard.js",
+    "test:interactive": "node run-wizard.js",
+    "test": "playwright test",
+    "check:status": "node check-status.js",
+    "allure:serve": "npx allure serve allure-results",
+    "allure:generate": "npx allure generate allure-results --clean -o allure-report",
+    "allure:open": "npx allure open allure-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
+    "allure-commandline": "^2.43.0",
+    "allure-playwright": "^3.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  }
+}
