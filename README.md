@@ -153,6 +153,27 @@ Comprehensive edge-case, boundary, and vulnerability test coverage:
 
 ---
 
+### 3. Regression Suite (`tests/regression/`)
+
+A comprehensive end-to-end regression framework guarding against functional breakage, session degradation, and data loss across platform releases:
+
+- **Consolidated E2E Pipeline (`regression-e2e.spec.ts`)**:
+  - Executes the full lifecycle in a **single browser tab** across all 3 roles using an isolated cookie and storage clearing engine (`loginAsRoleInSameTab`).
+  - **Phase 1 (Onboarding)**: Onboarding Officer fills and submits all 8 steps with dynamic Luhn data and batch document uploads.
+  - **Phase 2 (Compliance Review)**: Compliance Officer filters Verification Queue strictly by the generated MRN, inputs decision notes, and forwards.
+  - **Phase 3 (Final Approval)**: Final Approver inspects the approved dossier, enters sign-off notes, and activates the merchant.
+  - **Phase 4 (Dashboard Reconciliation)**: Validates Executive KPI Dashboard metrics, approval rates, and table reconciliations.
+- **Modular Multi-Spec Regression (`01-onboarding-wizard.spec.ts` .. `04-status-transitions.spec.ts`)**:
+  - Independent, state-serialized specs using [`fixtures/regression-state.json`](fixtures/regression-state.json) for targeted debugging of isolated lifecycle phases.
+- **Data Integrity & Edge Verifications**:
+  - Auto-trimming of leading/trailing whitespace on all text inputs.
+  - Multi-card persistence across Shareholder (100% boundary), UBO (25% control), and Signatory tables.
+  - Document attachment counts and format verification.
+
+> 📖 For full architecture and execution details, see the dedicated **[Regression Test Suite Specification](REGRESSION_SUITE.md)**.
+
+---
+
 ## Dynamic Test Data & Shareholder Mode
 
 All dynamic test data is generated via [`fixtures/test-data.ts`](file:///C:/Users/Kiran/.gemini/antigravity/scratch/qiplus-e2e/fixtures/test-data.ts) and [`fixtures/merchant-data.ts`](file:///C:/Users/Kiran/.gemini/antigravity/scratch/qiplus-e2e/fixtures/merchant-data.ts):
@@ -201,6 +222,15 @@ npx playwright test tests/positive/
 ### 5. Run Negative Suite
 ```powershell
 npx playwright test tests/negative/
+```
+
+### 6. Run Complete Regression Suite
+```powershell
+# Run complete regression suite via Playwright project
+npx playwright test --project=regression
+
+# Or run the consolidated single-tab E2E spec with live browser
+npx playwright test tests/regression/regression-e2e.spec.ts --headed
 ```
 
 ---
