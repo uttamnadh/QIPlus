@@ -32,3 +32,10 @@ Thumbs.db
 scratch/
 temp/
 tmp/
+
+# Build outputs
+dist/
+
+# MuseQA Agent artifacts
+agent-results/
+

@@ -11,7 +11,12 @@
     "check:status": "node check-status.js",
     "allure:serve": "npx allure serve allure-results",
     "allure:generate": "npx allure generate allure-results --clean -o allure-report",
-    "allure:open": "npx allure open allure-report"
+    "allure:open": "npx allure open allure-report",
+    "build": "tsc",
+    "agent": "tsc && node dist/agent/runner.js",
+    "agent:role": "tsc && node dist/agent/runner.js --role",
+    "agent:quick": "tsc && node dist/agent/runner.js --quick",
+    "agent:headed": "tsc && node dist/agent/runner.js --headed"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,321 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-09-11T11:18:00+05:30",
+  "bugs": [
+    {
+      "id": "KNOWN-001",
+      "fingerprint": "missing-feature:/merchants/new:legalDeclarations:onboarding",
+      "title": "Missing Legal Declarations Step (§5.10)",
+      "category": "missing-feature",
+      "urlPattern": "/merchants/new",
+      "role": "onboarding",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-002",
+      "fingerprint": "validation-gap:/merchants/new:averageTransactionValue:onboarding",
+      "title": "ATV > Monthly Volume accepted (§5.5)",
+      "category": "validation-gap",
+      "urlPattern": "/merchants/new",
+      "fieldName": "averageTransactionValue",
+      "role": "onboarding",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-003",
+      "fingerprint": "validation-gap:/merchants/new:uboDateOfBirth:onboarding",
+      "title": "Underage UBO accepted (§5.7)",
+      "category": "validation-gap",
+      "urlPattern": "/merchants/new",
+      "fieldName": "dateOfBirth",
+      "role": "onboarding",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-004",
+      "fingerprint": "validation-gap:/merchants/new:fileUploadZeroByte:onboarding",
+      "title": "0-byte file upload accepted (§9)",
+      "category": "validation-gap",
+      "urlPattern": "/merchants/new",
+      "role": "onboarding",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-005",
+      "fingerprint": "data-integrity:/merchants/new:doubleSubmit:onboarding",
+      "title": "Double-submit 422 race condition",
+      "category": "data-integrity",
+      "urlPattern": "/merchants/new",
+      "role": "onboarding",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-006",
+      "fingerprint": "missing-feature:/merchants/review:riskRating:compliance",
+      "title": "Missing Risk Rating (§4.2, §5.11)",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "compliance",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-007",
+      "fingerprint": "missing-feature:/merchants/review:screeningChecklist:compliance",
+      "title": "Missing Screening Checklist (§7)",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "compliance",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-008",
+      "fingerprint": "missing-feature:/merchants/approval:riskTierSummary:approver",
+      "title": "Missing Risk Tier on Approval Summary",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "approver",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-009",
+      "fingerprint": "missing-feature:/merchants/approval:confirmationDialog:approver",
+      "title": "Missing Confirmation on Final Approval",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "approver",
+      "foundDate": "2026-09-08",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-010",
+      "fingerprint": "network-error:/merchants:auditor404:auditor",
+      "title": "Merchant directory 404 for Auditor",
+      "category": "network-error",
+      "urlPattern": "/merchants",
+      "role": "auditor",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-011",
+      "fingerprint": "missing-feature:/audit-trail:auditorUi:auditor",
+      "title": "Missing Audit Trail interface",
+      "category": "missing-feature",
+      "urlPattern": "/audit-trail",
+      "role": "auditor",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-012",
+      "fingerprint": "missing-feature:/merchants:exportButton:auditor",
+      "title": "Missing Export for Auditor",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "auditor",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-013",
+      "fingerprint": "network-error:/admin/picklists:adminPicklists404:admin",
+      "title": "Missing Picklist/Prohibited Activity routes",
+      "category": "network-error",
+      "urlPattern": "/admin/picklists",
+      "role": "admin",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-014",
+      "fingerprint": "functional:/admin/users:roleNamingInconsistency:admin",
+      "title": "Inconsistent Role Naming (UI vs Spec)",
+      "category": "functional",
+      "urlPattern": "/admin/users",
+      "role": "admin",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-015",
+      "fingerprint": "functional:/admin/users:mfaEnforcementMissing:admin",
+      "title": "MFA Enforcement missing on user creation",
+      "category": "functional",
+      "urlPattern": "/admin/users",
+      "role": "admin",
+      "foundDate": "2026-09-09",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-016",
+      "fingerprint": "rbac-bypass:/api/v1/merchants:complianceQueueBypass:onboarding",
+      "title": "BOLA/RBAC API Bypass (Maker accesses Compliance queue)",
+      "category": "rbac-bypass",
+      "urlPattern": "/api/v1/merchants",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-017",
+      "fingerprint": "validation-gap:/api/v1/merchants:negativePagination:onboarding",
+      "title": "Negative Pagination Accepted (size=-1)",
+      "category": "validation-gap",
+      "urlPattern": "/api/v1/merchants",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-018",
+      "fingerprint": "functional:/dashboard:jwtStateF5Refresh:onboarding",
+      "title": "In-Memory Token Loss on F5 Refresh",
+      "category": "functional",
+      "urlPattern": "/dashboard",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-019",
+      "fingerprint": "visual-glitch:/merchants/new:fixedHeaderZIndex1201:onboarding",
+      "title": "Fixed Header Pointer Interception (z-index 1201)",
+      "category": "visual-glitch",
+      "urlPattern": "/merchants/new",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-020",
+      "fingerprint": "visual-glitch:/merchants/new:missingMobileStickyActionBar:onboarding",
+      "title": "Missing Mobile Sticky Action Bar",
+      "category": "visual-glitch",
+      "urlPattern": "/merchants/new",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-021",
+      "fingerprint": "validation-gap:/merchants/new:trnPrefixBlurValidation:onboarding",
+      "title": "TRN Prefix Not Enforced on Blur",
+      "category": "validation-gap",
+      "urlPattern": "/merchants/new",
+      "fieldName": "trn",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-022",
+      "fingerprint": "missing-feature:/merchants:draftsQueueSearchFilter:onboarding",
+      "title": "Drafts Queue No Search/Filter",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-023",
+      "fingerprint": "functional:/merchants/new:phoneInputMaskBackspaceClear:onboarding",
+      "title": "Phone Input Mask Clears on Backspace",
+      "category": "functional",
+      "urlPattern": "/merchants/new",
+      "fieldName": "primaryContactPhone",
+      "role": "onboarding",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-024",
+      "fingerprint": "missing-feature:/merchants:complianceQueueSearchFilter:compliance",
+      "title": "Compliance Queue No Search/Filter",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "compliance",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-025",
+      "fingerprint": "validation-gap:/merchants/review:decisionNotesWhitespaceOnly:compliance",
+      "title": "Decision Notes Accepts Whitespace-Only",
+      "category": "validation-gap",
+      "urlPattern": "/merchants",
+      "fieldName": "notes",
+      "role": "compliance",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-026",
+      "fingerprint": "missing-feature:/merchants:noBatchApproval:approver",
+      "title": "No Batch Approval Capability",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "approver",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-027",
+      "fingerprint": "functional:/merchants/approval:immediateActivationWithoutConfirmation:approver",
+      "title": "Immediate Activation Without Confirmation",
+      "category": "functional",
+      "urlPattern": "/merchants",
+      "role": "approver",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-028",
+      "fingerprint": "network-error:/merchants:routeMismatchSearch404:auditor",
+      "title": "Route Mismatch /merchants 404 vs /merchants/search",
+      "category": "network-error",
+      "urlPattern": "/merchants",
+      "role": "auditor",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-029",
+      "fingerprint": "missing-feature:/merchants:zeroExportFeatures:auditor",
+      "title": "Zero Export Features (Auditor)",
+      "category": "missing-feature",
+      "urlPattern": "/merchants",
+      "role": "auditor",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-030",
+      "fingerprint": "missing-feature:/admin/users:cannotEditExistingUsers:admin",
+      "title": "Cannot Edit Existing Users",
+      "category": "missing-feature",
+      "urlPattern": "/admin/users",
+      "role": "admin",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    },
+    {
+      "id": "KNOWN-031",
+      "fingerprint": "missing-feature:/admin/users:missingUserDeactivationToggle:admin",
+      "title": "Missing User Deactivation Toggle",
+      "category": "missing-feature",
+      "urlPattern": "/admin/users",
+      "role": "admin",
+      "foundDate": "2026-09-10",
+      "status": "open"
+    }
+  ]
+}
