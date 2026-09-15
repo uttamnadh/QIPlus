@@ -1,11 +1,11 @@
 {
   "merchantId": "",
-  "mrn": "60908150050321",
+  "mrn": "60915095648240",
   "submitted": false,
   "complianceApproved": false,
-  "tradeName": "Pacific Industries 1413",
-  "legalName": "Pacific Industries 1413 LLC",
+  "tradeName": "Atlas Enterprise 6920",
+  "legalName": "Atlas Enterprise 6920 LLC",
   "shareholderType": "Individual",
-  "onHold": false,
-  "finalApproved": true
+  "onHold": true,
+  "finalApproved": false
 }

@@ -23,8 +23,7 @@ const initialShareholderType: ShareholderType = SHAREHOLDER_MODE === 'Entity' ? 
 let MERCHANT = getMerchantData('positive', initialShareholderType);
 const batchResults: Array<{ index: number; tradeName: string; mrn: string; shareholderType: string; success: boolean }> = [];
 
-const isGrepStep6 = process.argv.some(a => a.includes('Step [1-6]') || (a.includes('Step 6') && !a.includes('Step [1-7]')));
-const isGrepStep7 = process.argv.some(a => a.includes('Step [1-7]') || (a.includes('Step 7') && !a.includes('Step 8')));
+let highestStepCompleted = 0;
 
 /**
  * Reusable helper to execute onboarding steps sequentially for a merchant record up to maxStep.
@@ -103,6 +102,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(Math.max(180000, TOTAL_RECORDS * 120000));
     // Generate a fresh random merchant record with the selected shareholder type
     MERCHANT = getMerchantData('positive', initialShareholderType);
     saveState({ mrn: '', submitted: false, complianceApproved: false });
@@ -119,9 +119,50 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test.afterAll(async () => {
+    test.setTimeout(Math.max(180000, TOTAL_RECORDS * 120000));
+
+    // If TOTAL_RECORDS > 1 and Step 9 did not run (e.g. stopped at Step 7 or Step 6 due to --grep),
+    // run the remaining batch records up to highestStepCompleted!
+    if (TOTAL_RECORDS > 1 && highestStepCompleted > 0 && highestStepCompleted < 9 && page) {
+      console.log(`\n============================================================`);
+      console.log(`🚀 PROCESSING BATCH RECORDS 2..${TOTAL_RECORDS} (Up to Step ${highestStepCompleted})`);
+      console.log(`============================================================\n`);
+
+      batchResults.push({
+        index: 1,
+        tradeName: MERCHANT.tradeName,
+        mrn: sharedState.mrn || 'Created',
+        shareholderType: MERCHANT.shareholders[0].entityOrIndividual,
+        success: true
+      });
+
+      for (let r = 2; r <= TOTAL_RECORDS; r++) {
+        let shareholderType: ShareholderType = 'Individual';
+        if (SHAREHOLDER_MODE === 'Entity') shareholderType = 'Entity';
+        else if (SHAREHOLDER_MODE === 'Alternate') shareholderType = (r % 2 === 1) ? 'Individual' : 'Entity';
+
+        const currentMerchant = getMerchantData('positive', shareholderType);
+        console.log(`\n============================================================`);
+        console.log(`🚀 ONBOARDING RECORD ${r} OF ${TOTAL_RECORDS} (Up to Step ${highestStepCompleted})`);
+        console.log(`📌 Merchant: ${currentMerchant.tradeName} | Shareholder: ${shareholderType}`);
+        console.log(`============================================================\n`);
+
+        const mrn = await runWizardSteps(page, currentMerchant, highestStepCompleted);
+        console.log(`✅ Record ${r} completed up to Step ${highestStepCompleted} (MRN: ${mrn || 'Assigned'})`);
+
+        batchResults.push({
+          index: r,
+          tradeName: currentMerchant.tradeName,
+          mrn: mrn || 'N/A',
+          shareholderType,
+          success: true
+        });
+      }
+    }
+
     if (batchResults.length > 1) {
       console.log('\n========================================================================================================');
-      console.log(`🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS SUBMITTED SUCCESSFULLY`);
+      console.log(`🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS COMPLETED (Up to Step ${highestStepCompleted})`);
       console.log('========================================================================================================');
       console.log(
         '#'.padEnd(4) + '| ' +
@@ -133,7 +174,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
       console.log('----+-------------------------------------+-------------------+----------------+------------------------');
 
       batchResults.forEach((r) => {
-        const status = r.success ? '✅ Submitted (Review)' : '❌ Failed';
+        const status = r.success ? `✅ Step ${highestStepCompleted} Done` : '❌ Failed';
         const name = (r.tradeName || 'Merchant').substring(0, 34);
         console.log(
           String(r.index).padEnd(4) + '| ' +
@@ -145,14 +186,16 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
       });
       console.log('========================================================================================================\n');
     }
-    await ctx?.close();
+
+    const basePage = new BaseWizardPage(page);
+    await basePage.signOut().catch(() => {});
+    await ctx?.close().catch(() => {});
   });
 
   test('Step 1 — Create NEW merchant record, fill Profile and save', async () => {
     const dashboard = new DashboardPage(page);
     const step1 = new Step1ProfilePage(page);
 
-    const vatDocPath = path.resolve(__dirname, '../../fixtures/dummy_1.png');
     await dashboard.clickCreateMerchant();
     await step1.expectStep(1);
     await step1.fillAll(MERCHANT);
@@ -164,6 +207,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
       saveState({ mrn });
     }
 
+    highestStepCompleted = Math.max(highestStepCompleted, 1);
     await step1.expectStep(2);
   });
 
@@ -173,6 +217,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
 
     await step2.fillAll(MERCHANT.business);
     await step2.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 2);
     await step2.expectStep(3);
   });
 
@@ -186,6 +231,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     expect(total).toContain('100');
 
     await step3.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 3);
     await step3.expectStep(4);
   });
 
@@ -197,6 +243,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     await step4.fillUBO(0, MERCHANT.ubos[0]);
 
     await step4.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 4);
     await step4.expectStep(5);
   });
 
@@ -207,6 +254,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     await step5.fillSignatory(0, MERCHANT.signatories[0]);
 
     await step5.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 5);
     await step5.expectStep(6);
   });
 
@@ -217,29 +265,8 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
 
     await step6.fillAll(MERCHANT.banking);
     await step6.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 6);
     await step6.expectStep(7);
-
-    // If running in partial grep mode stopping at Step 6, complete remaining records up to Step 6
-    if (isGrepStep6 && TOTAL_RECORDS > 1) {
-      console.log(`\n============================================================`);
-      console.log(`🎉 Record 1 of ${TOTAL_RECORDS} reached Step 6 successfully (MRN: ${sharedState.mrn || 'Created'})`);
-      console.log(`============================================================\n`);
-
-      for (let r = 2; r <= TOTAL_RECORDS; r++) {
-        let shareholderType: ShareholderType = 'Individual';
-        if (SHAREHOLDER_MODE === 'Entity') shareholderType = 'Entity';
-        else if (SHAREHOLDER_MODE === 'Alternate') shareholderType = (r % 2 === 1) ? 'Individual' : 'Entity';
-
-        const currentMerchant = getMerchantData('positive', shareholderType);
-        console.log(`\n============================================================`);
-        console.log(`🚀 ONBOARDING RECORD ${r} OF ${TOTAL_RECORDS} (Up to Step 6)`);
-        console.log(`📌 Merchant: ${currentMerchant.tradeName} | Shareholder: ${shareholderType}`);
-        console.log(`============================================================\n`);
-
-        const mrn = await runWizardSteps(page, currentMerchant, 6);
-        console.log(`✅ Record ${r} completed up to Step 6 (MRN: ${mrn || 'Assigned'})`);
-      }
-    }
   });
 
   test('Step 7 — Upload documents and save', async () => {
@@ -262,29 +289,8 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     await page.screenshot({ path: 'test-results/step7-live-after-upload.png', fullPage: true });
 
     await step7.clickSaveAndContinue();
+    highestStepCompleted = Math.max(highestStepCompleted, 7);
     await step7.expectStep(8);
-
-    // If running in partial grep mode stopping at Step 7, complete remaining records up to Step 7
-    if (isGrepStep7 && TOTAL_RECORDS > 1) {
-      console.log(`\n============================================================`);
-      console.log(`🎉 Record 1 of ${TOTAL_RECORDS} reached Step 7 & saved successfully (MRN: ${sharedState.mrn || 'Created'})`);
-      console.log(`============================================================\n`);
-
-      for (let r = 2; r <= TOTAL_RECORDS; r++) {
-        let shareholderType: ShareholderType = 'Individual';
-        if (SHAREHOLDER_MODE === 'Entity') shareholderType = 'Entity';
-        else if (SHAREHOLDER_MODE === 'Alternate') shareholderType = (r % 2 === 1) ? 'Individual' : 'Entity';
-
-        const currentMerchant = getMerchantData('positive', shareholderType);
-        console.log(`\n============================================================`);
-        console.log(`🚀 ONBOARDING RECORD ${r} OF ${TOTAL_RECORDS} (Up to Step 7)`);
-        console.log(`📌 Merchant: ${currentMerchant.tradeName} | Shareholder: ${shareholderType}`);
-        console.log(`============================================================\n`);
-
-        const mrn = await runWizardSteps(page, currentMerchant, 7);
-        console.log(`✅ Record ${r} completed up to Step 7 (MRN: ${mrn || 'Assigned'})`);
-      }
-    }
   });
 
   test('Step 8 — Review data integrity and submit record', async () => {
@@ -301,6 +307,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
 
     // Submit for review and confirm modal dialog
     await step8.submitForReview();
+    highestStepCompleted = Math.max(highestStepCompleted, 8);
     saveState({ submitted: true });
   });
 
