@@ -22,10 +22,6 @@ pipeline {
         )
     }
 
-    triggers {
-        // Run daily at 02:00 AM (Monday to Friday)
-        cron('H 2 * * 1-5')
-    }
 
     stages {
         stage('Checkout Code') {
