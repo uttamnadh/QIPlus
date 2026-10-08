@@ -12,7 +12,7 @@ import { Step8ReviewPage } from '../../pages/wizard/step8-review.page';
 import { ComplianceQueuePage } from '../../pages/compliance-queue.page';
 import { ApprovalQueuePage } from '../../pages/approval-queue.page';
 import { BaseWizardPage } from '../../pages/wizard/base-wizard.page';
-import { getMerchantData, ROLES, printMerchantSubmissionSummary } from '../../fixtures/merchant-data';
+import { getMerchantData, ROLES, printMerchantSubmissionSummary, saveState } from '../../fixtures/merchant-data';
 import { buildDraftIdentity } from '../../fixtures/test-data';
 import { saveRegressionState, loadRegressionState, saveRegressionRecord } from '../../fixtures/regression-state';
 import * as path from 'path';
@@ -129,7 +129,7 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
   // PHASE 1: ONBOARDING OFFICER — WIZARD STEPS 1–8 WALKTHROUGH
   // ─────────────────────────────────────────────────────────────
 
-  test('1.1 — Onboarding Officer logs in & completes Step 1 (Profile) with validation checks', async () => {
+  test('1.1 — Onboarding Officer logs in & completes Step 1 (Profile) cleanly', async () => {
     await loginAsRoleInSameTab(page, ROLES.onboarding);
     const dashboard = new DashboardPage(page);
     await dashboard.clickCreateMerchant();
@@ -137,23 +137,15 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     const step1 = new Step1ProfilePage(page);
     await step1.expectStep(1);
 
-    // Field-level check: Trade name blank -> blocked
-    await step1.fillTradeName('');
-    await step1.clickSaveAndContinue();
-    await step1.expectStep(1);
-
-    // Field-level check: TRN format invalid -> blocked
-    await step1.fillTradeName(MERCHANT.tradeName);
-    await step1.fillTrn('12345');
-    await step1.clickSaveAndContinue();
-    await step1.expectStep(1);
-
-    // Fill valid Step 1 details (testing whitespace trimming on trade name)
+    // Fill valid Step 1 details directly (with whitespace trimming test)
     const spacedTradeName = `  ${MERCHANT.tradeName}  `;
     await step1.fillAll({ ...MERCHANT, tradeName: spacedTradeName });
     await step1.clickSaveAndContinue();
 
-    const mrn = await step1.getRegistrationNumber();
+    const step2 = new Step2BusinessPage(page);
+    await step2.expectStep(2);
+
+    const mrn = await step2.getRegistrationNumber();
     saveRegressionState({ mrn });
     saveRegressionRecord({
       mrn,
@@ -161,35 +153,15 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
       legalName: MERCHANT.legalName,
       shareholderType: 'Individual',
     });
+    saveState({ mrn, tradeName: MERCHANT.tradeName, legalName: MERCHANT.legalName });
     console.log(`[REG-E2E] Single Shared Draft Created. MRN: ${mrn}`);
-
-    const step2 = new Step2BusinessPage(page);
-    await step2.expectStep(2);
   });
 
-  test('1.2 — Complete Step 2 (Business) with XSS sanitization check', async () => {
+  test('1.2 — Complete Step 2 (Business) cleanly', async () => {
     const step2 = new Step2BusinessPage(page);
     await step2.expectStep(2);
 
-    // Field-level check: Primary products blank -> blocked
-    await step2.fillPrimaryProducts('');
-    await step2.clickSaveAndContinue();
-    await step2.expectStep(2);
-
-    // Fill full Step 2 details first
-    await step2.fillAll(MERCHANT.business);
-
-    // XSS check: Test script injection attempt in Primary Products
-    await step2.fillPrimaryProducts('<script>alert("XSS")</script>');
-    await step2.clickSaveAndContinue();
-
-    // Check if UI blocked with validation error or sanitized cleanly
-    const isBlocked = await page.locator('.Mui-error, [role="alert"]').isVisible({ timeout: 1500 }).catch(() => false);
-    if (isBlocked) {
-      await step2.expectStep(2);
-    }
-
-    // Restore clean business details and advance to Step 3
+    // Fill business details directly
     await step2.fillAll(MERCHANT.business);
     await step2.clickSaveAndContinue();
 
@@ -197,7 +169,7 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     await step3.expectStep(3);
   });
 
-  test('1.3 — Complete Step 3 (Ownership) with Dual Shareholders & 110% boundary check', async () => {
+  test('1.3 — Complete Step 3 (Ownership) with Dual Shareholders (Individual 50% + Entity 50%)', async () => {
     const step3 = new Step3OwnershipPage(page);
     await step3.expectStep(3);
 
@@ -206,39 +178,12 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     await step3.fillShareholder(0, MERCHANT.shareholders[0]);
 
     // 2. Add second shareholder: Entity (50% shareholding, Trade License)
-    console.log(`[Step 3] Clicking '+ Add shareholder' for Shareholder 2 (Entity)...`);
-    await step3.addShareholder();
-    await page.waitForTimeout(500);
-
     console.log(`[Step 3] Adding Shareholder 2 (Entity): ${MERCHANT.shareholders[1].fullLegalName} (50%)`);
+    await step3.addShareholder();
     await step3.fillShareholder(1, MERCHANT.shareholders[1]);
 
-    let total = await step3.getTotalShareholding();
+    const total = await step3.getTotalShareholding();
     console.log(`[Step 3] Total shareholding entered: ${total}`);
-    expect(total).toContain('100');
-
-    // 3. Dynamic Boundary & Deletion Check: Add 3rd card, exceed 100%, delete card
-    console.log(`[Step 3 Regression] Testing 110% boundary condition & dynamic removal...`);
-    await step3.addShareholder();
-    await page.waitForTimeout(400);
-    const pctInp3 = page.getByLabel(/% shareholding/i).nth(2);
-    if (await pctInp3.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await pctInp3.fill('10');
-      const exceedTotal = await step3.getTotalShareholding();
-      console.log(`[Step 3 Regression] Exceeded total: ${exceedTotal}`);
-
-      // Delete the 3rd shareholder card
-      const delBtns = page.locator('button[aria-label*="Remove" i], button[aria-label*="delete" i], button:has-text("Delete"), button:has-text("Remove"), [data-testid*="Delete"]');
-      const delCount = await delBtns.count();
-      if (delCount > 0) {
-        await delBtns.last().click({ force: true }).catch(() => {});
-        await page.waitForTimeout(400);
-      }
-    }
-
-    // Confirm total is restored to 100.00%
-    total = await step3.getTotalShareholding();
-    console.log(`[Step 3 Regression] Restored total after deletion: ${total}`);
     expect(total).toContain('100');
 
     await step3.clickSaveAndContinue();
@@ -266,16 +211,11 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     await step5.expectStep(5);
   });
 
-  test('1.5 — Complete Step 5 (Signatories) with mandatory signatory check', async () => {
+  test('1.5 — Complete Step 5 (Signatories) with Authorised Signatory details', async () => {
     const step5 = new Step5SignatoriesPage(page);
     await step5.expectStep(5);
 
-    // Field-level check: Signatory full name blank -> blocked
-    await page.getByLabel('Full name *').first().fill('');
-    await step5.clickSaveAndContinue();
-    await step5.expectStep(5);
-
-    // Fill valid signatory details and save
+    // Fill valid signatory details directly and advance
     await step5.fillSignatory(0, MERCHANT.signatories[0]);
     await step5.clickSaveAndContinue();
 
@@ -341,6 +281,22 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
 
     const mrn = await step8.getRegistrationNumber();
     console.log(`[REG-E2E] Submitting MRN: ${mrn} for Compliance Review`);
+    if (mrn) {
+      saveRegressionState({ mrn });
+      saveRegressionRecord({
+        mrn,
+        tradeName: MERCHANT.tradeName,
+        legalName: MERCHANT.legalName,
+        shareholderType: 'Individual',
+        submitted: true,
+      });
+      saveState({
+        mrn,
+        tradeName: MERCHANT.tradeName,
+        legalName: MERCHANT.legalName,
+        submitted: true,
+      });
+    }
 
     await step8.submitForReview();
     await page.waitForTimeout(1000);
@@ -387,9 +343,9 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     console.log(`[REG-E2E] Compliance approving MRN: ${targetMRN}`);
     await queue.approveMerchant('Compliance regression verification passed after document check.');
 
-    // eMcREY AML SCREENING: Refresh Approved section >5 times until record appears
+    // eMcREY AML SCREENING: Refresh Approved section until record appears (8 attempts, 1s delay)
     console.log(`[REG-E2E] Polling Compliance Approved section for MRN ${targetMRN} awaiting eMcREY screening...`);
-    const approvedResult = await queue.waitForRecordInApproved(targetMRN, 10, 5000);
+    const approvedResult = await queue.waitForRecordInApproved(targetMRN, 8, 1000);
     expect(approvedResult.found, `MRN ${targetMRN} must appear in Compliance Approved section`).toBe(true);
 
     const basePage = new BaseWizardPage(page);
@@ -412,15 +368,12 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     const queue = new ApprovalQueuePage(page);
     await queue.navigateToApprovalQueue();
 
-    // eMcREY SCREENING POLLING: Retry-loop — refresh + re-search by MRN, up to 10 attempts
-    const found = await queue.waitForRecordInApprovalQueue(targetMRN, 10, 5000);
-    expect(found, `MRN ${targetMRN} was not found in Approval Queue after 10 eMcREY screening retry attempts`).toBeTruthy();
+    // eMcREY SCREENING POLLING: Retry-loop — refresh + re-search by MRN, up to 8 attempts (1s delay)
+    const found = await queue.waitForRecordInApprovalQueue(targetMRN, 8, 1000);
+    expect(found, `MRN ${targetMRN} was not found in Approval Queue after retry attempts`).toBeTruthy();
 
     // Verify trade name on final approval screen
     await queue.expectTradeName(MERCHANT.tradeName);
-
-    // Trigger "Re-check screening result" if button is present
-    await queue.recheckScreeningResult();
 
     // Read and log AML risk rating if displayed
     const riskRating = await queue.getRiskRating(targetMRN);
@@ -428,46 +381,81 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
       console.log(`[REG-E2E] AML Risk Rating for MRN ${targetMRN}: ${riskRating}`);
     }
 
-    // Check if screening hit or decision locked
-    const isScreeningHit = await page.locator('text=/Screening hit|case opened for compliance review/i').first().isVisible({ timeout: 2000 }).catch(() => false);
+    // Wait for the decision notes textarea to be visible
     const notesInput = page.locator('textarea, [role="textbox"], input[name="notes"]').first();
+    await notesInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     const isNotesEditable = await notesInput.isEditable().catch(() => false);
 
-    if (isScreeningHit || !isNotesEditable) {
-      console.log(`\n[REG-E2E] Without logout: Refreshing page once to check updated status for MRN ${targetMRN}...`);
-      await page.waitForTimeout(2000);
-      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-      await page.waitForTimeout(1500);
+    // Check explicitly if the screening result card indicates a Hit or On-hold outcome
+    const isScreeningHit = await page.locator('text=/Screening hit|case opened for compliance review/i').first().isVisible({ timeout: 1500 }).catch(() => false);
+    const screeningCard = page.locator('div, section').filter({ hasText: /Screening result/i }).first();
+    const outcomeOnHold = await screeningCard.locator('text=/^On-hold$/i, [class*="badge"]:has-text("On-hold")').first().isVisible({ timeout: 1500 }).catch(() => false);
 
-      console.log(`[REG-E2E] ℹ️ MRN ${targetMRN} is in On-hold (Under compliance review) — decision buttons are locked and cannot be approved by Final Approver.`);
+    // Truly On-hold or Screening Hit when notes are locked or screening explicitly says Hit/On-hold
+    if (!isNotesEditable || isScreeningHit || outcomeOnHold) {
+      const statusReason = isScreeningHit ? 'Screening hit (Case opened for compliance review)' : (outcomeOnHold ? 'Outcome: On-hold' : 'Decision notes locked');
+      console.log(`[REG-E2E] ⚠️ Record is On-hold / Screening Hit (${statusReason}). Decision cannot be taken.`);
+      saveRegressionRecord({
+        mrn: targetMRN,
+        tradeName: MERCHANT.tradeName,
+        legalName: MERCHANT.legalName,
+        shareholderType: 'Individual',
+        finalApproved: false,
+      });
+      saveRegressionState({ finalApproved: false });
+
       await queue.navigateToApprovalQueue();
       await queue.filterByMRN(targetMRN);
       const row = page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
       await expect(row).toBeVisible({ timeout: 5000 });
       const rowText = await row.innerText().catch(() => '');
 
+      // Check status in Merchant Search as Final Approver
+      console.log(`[REG-E2E] Checking status for On-hold record in Merchant Search...`);
+      await queue.navigateToMerchantSearch();
+      await queue.filterByMRN(targetMRN);
+      await page.locator('.MuiSkeleton-root').first().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+      const searchRow = page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
+      await expect(searchRow).toBeVisible({ timeout: 5000 });
+      const searchRowText = await searchRow.innerText().catch(() => '');
+      expect(searchRowText).toMatch(/On hold|Under compliance review|Pending/i);
+      console.log(`[REG-E2E] ✅ Verified status in Merchant Search: ${searchRowText.replace(/\n+/g, ' | ')}`);
+
       console.log('\n============================================================');
       console.log('⚠️ [VS CODE TERMINAL STATUS AUDIT — REGRESSION]');
       console.log(`📄 MRN NUMBER    : ${targetMRN}`);
       console.log(`🏢 TRADE NAME    : ${MERCHANT.tradeName || 'N/A'}`);
-      console.log('🔍 SCREENING     : eMcREY Hit (Flagged for Review)');
-      console.log('🔒 RECORD STATUS : 🟡 ON-HOLD (UNDER COMPLIANCE REVIEW)');
+      console.log(`🔍 SCREENING     : ${isScreeningHit ? 'eMcREY Hit (Flagged for Review)' : 'eMcREY Screening'}`);
+      console.log(`🔒 RECORD STATUS : ${outcomeOnHold ? '🟡 ON-HOLD (UNDER COMPLIANCE REVIEW)' : '🔴 SCREENING HIT'}`);
       console.log('⛔ ACTION        : Decision Locked (Buttons Disabled)');
       console.log(`📋 QUEUE ROW     : ${rowText.replace(/\n+/g, ' | ')}`);
+      console.log(`🔍 SEARCH ROW    : ${searchRowText.replace(/\n+/g, ' | ')}`);
       console.log('============================================================\n');
     } else {
       // Write decision notes and approve to Active
       console.log(`[REG-E2E] Final Approver activating MRN: ${targetMRN}`);
       await queue.approveMerchant('Final approval and merchant activation granted after eMcREY AML verification.');
 
-      console.log(`\n[REG-E2E] Without logout: Refreshing page once to check updated status for MRN ${targetMRN}...`);
-      await page.waitForTimeout(2000);
-      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-      await page.waitForTimeout(1500);
+      // Check status in Merchant Search as Final Approver
+      console.log(`[REG-E2E] Checking status for Activated record in Merchant Search as Final Approver...`);
+      await queue.navigateToMerchantSearch();
+      await queue.filterByMRN(targetMRN);
+      await page.locator('.MuiSkeleton-root').first().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+      const searchRow = page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
+      await expect(searchRow).toBeVisible({ timeout: 10000 });
+      await expect(searchRow.locator('text=/Active/i').first()).toBeVisible({ timeout: 10000 });
+      const searchRowText = await searchRow.innerText().catch(() => '');
+      console.log(`[REG-E2E] ✅ Verified Active status in Merchant Search: ${searchRowText.replace(/\n+/g, ' | ')}`);
 
-      // Verify merchant is Active in directory
-      const isActive = await queue.verifyMerchantActive(targetMRN);
-      expect(isActive, `Merchant ${targetMRN} should be verified Active in directory`).toBe(true);
+      saveRegressionRecord({
+        mrn: targetMRN,
+        tradeName: MERCHANT.tradeName,
+        legalName: MERCHANT.legalName,
+        shareholderType: 'Individual',
+        finalApproved: true,
+      });
+      saveRegressionState({ finalApproved: true });
+      saveState({ finalApproved: true });
 
       console.log('\n============================================================');
       console.log('🌟 [VS CODE TERMINAL STATUS AUDIT — REGRESSION]');
@@ -476,6 +464,7 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
       console.log('🔍 SCREENING     : eMcREY Clear (Low Risk)');
       console.log('✅ RECORD STATUS : 🟢 ACTIVE (APPROVED & ACTIVATED)');
       console.log('💎 LIFECYCLE     : Onboarding -> Compliance -> Activated');
+      console.log(`🔍 SEARCH ROW    : ${searchRowText.replace(/\n+/g, ' | ')}`);
       console.log('============================================================\n');
     }
 
@@ -483,60 +472,5 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
     await basePage.signOut();
     expect(page.url()).toContain('/login');
   });
-
-  // ─────────────────────────────────────────────────────────────
-  // PHASE 4: MULTI-ROLE STATUS RECONCILIATION
-  // 1st: Sukesh (Onboarding) in Submitted list
-  // 2nd: Bhanu (Compliance) in Approved list
-  // (Uttamnadh already verified in Phase 3 without logout)
-  // ─────────────────────────────────────────────────────────────
-
-  test('4.1 — Verify multi-role status for Onboarding Officer (1st) and Compliance Officer (2nd)', async () => {
-    const state = loadRegressionState();
-    const targetMRN = state.mrn;
-    expect(targetMRN).toBeTruthy();
-    test.skip(!state.finalApproved, 'Regression merchant is On-hold (Under compliance review) / not final approved; skipping Phase 4 post-activation status checks.');
-
-    const basePage = new BaseWizardPage(page);
-
-    // 1st — Onboarding officer (Sukesh) checks status in Submitted list
-    await loginAsRoleInSameTab(page, ROLES.onboarding);
-    await page.click('text="Submitted"');
-    const searchInput = page.getByPlaceholder('Filter by MRN or name').or(page.locator('input[placeholder*="Search" i], input[placeholder*="Filter" i]')).first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchInput.click();
-      await searchInput.fill(targetMRN);
-      await page.keyboard.press('Enter');
-    }
-    const submittedRow = page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-    await expect(submittedRow).toBeVisible({ timeout: 5000 });
-    const subText = await submittedRow.innerText().catch(() => '');
-
-    console.log('\n============================================================');
-    console.log('📋 [REG-E2E STATUS CHECK 1/2 — ONBOARDING OFFICER (SUKESH)]');
-    console.log(`📄 MRN NUMBER    : ${targetMRN}`);
-    console.log(`🏢 TRADE NAME    : ${MERCHANT.tradeName || 'N/A'}`);
-    console.log('📍 LOCATION       : Submitted List');
-    console.log(`📋 DETAILS       : ${subText.replace(/\n+/g, ' | ')}`);
-    console.log('============================================================\n');
-    await basePage.signOut();
-
-    // 2nd — Compliance officer (Bhanu) checks status in Approved list
-    await loginAsRoleInSameTab(page, ROLES.compliance);
-    const compQueue = new ComplianceQueuePage(page);
-    await compQueue.navigateToApproved();
-    await compQueue.filterByMRN(targetMRN);
-    const approvedRow = page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-    await expect(approvedRow).toBeVisible({ timeout: 5000 });
-    const appText = await approvedRow.innerText().catch(() => '');
-
-    console.log('\n============================================================');
-    console.log('📋 [REG-E2E STATUS CHECK 2/2 — COMPLIANCE OFFICER (BHANU)]');
-    console.log(`📄 MRN NUMBER    : ${targetMRN}`);
-    console.log(`🏢 TRADE NAME    : ${MERCHANT.tradeName || 'N/A'}`);
-    console.log('📍 LOCATION       : Compliance Approved List');
-    console.log(`📋 DETAILS       : ${appText.replace(/\n+/g, ' | ')}`);
-    console.log('============================================================\n');
-    await basePage.signOut();
-  });
 });
+

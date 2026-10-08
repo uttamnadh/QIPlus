@@ -35,3 +35,4 @@ tmp/
 
 dist/
 agent-results/
+fixtures/.run-config.json

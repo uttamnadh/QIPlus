@@ -21,27 +21,9 @@ export class Step5SignatoriesPage extends BaseWizardPage {
     emiratesIdNumber: string;
     scopeOfAuthority: string;
   }) {
-    // 1. Lightning-fast batch fill for all signatory inputs
-    await this.fastFillReact({
-      [`input[name="signatories.${index}.fullName"]`]: data.fullName,
-      [`input[name="signatories.${index}.designation"]`]: data.designation,
-      [`input[name="signatories.${index}.idRegNo"]`]: data.emiratesIdNumber,
-      [`textarea[name="signatories.${index}.scopeOfAuthority"]`]: data.scopeOfAuthority,
-    });
-
-    // Fallbacks
-    const nameInp = this.page.locator(`input[name="signatories.${index}.fullName"], input[name*="fullName"]`).nth(index);
-    if (await nameInp.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await nameInp.inputValue().catch(() => '')) !== data.fullName) {
-        await nameInp.fill(data.fullName);
-      }
-    }
-    const desigInp = this.page.locator(`input[name="signatories.${index}.designation"], input[name*="designation"]`).nth(index);
-    if (await desigInp.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await desigInp.inputValue().catch(() => '')) !== data.designation) {
-        await desigInp.fill(data.designation);
-      }
-    }
+    // 1. Direct instant text inputs via Playwright labels
+    await this.page.getByLabel('Full name *').nth(index).fill(data.fullName);
+    await this.page.getByLabel('Designation / role *').nth(index).fill(data.designation);
 
     // 2. ID type radio
     if (data.idType === 'Emirates ID') {
@@ -50,32 +32,23 @@ export class Step5SignatoriesPage extends BaseWizardPage {
       await this.page.getByRole('radio', { name: 'Passport' }).nth(index).check({ force: true }).catch(() => {});
     }
 
-    const eid = this.page.getByLabel('Emirates ID number *').nth(index).or(
-      this.page.locator(`input[name="signatories.${index}.idRegNo"], input[name*="idRegNo"]`).nth(index)
-    );
-    await eid.fill(data.emiratesIdNumber).catch(() => {});
+    await this.page.getByLabel('Emirates ID number *').nth(index).fill(data.emiratesIdNumber);
+    await this.page.getByLabel('Scope of authority *').nth(index).fill(data.scopeOfAuthority);
 
-    const scopeInp = this.page.getByLabel('Scope of authority *').nth(index).or(
-      this.page.locator(`input[name="signatories.${index}.scopeOfAuthority"], textarea[name="signatories.${index}.scopeOfAuthority"], textarea`).nth(index)
-    );
-    if (await scopeInp.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await scopeInp.inputValue().catch(() => '')) !== data.scopeOfAuthority) {
-        await scopeInp.fill(data.scopeOfAuthority).catch(() => {});
-      }
-    }
-
-    // 3. Nationality dropdown
+    // 3. Nationality dropdown (only if not already matching)
     try {
       const natGroup = this.page.locator('.MuiFormControl-root').filter({ hasText: /Nationality/i }).nth(index);
-      const natCombobox = natGroup.locator('[role="combobox"]').first();
-      if (await natCombobox.isVisible({ timeout: 800 }).catch(() => false)) {
-        await natCombobox.click({ force: true });
-        const listbox = this.page.locator('[role="listbox"]').first();
-        const opt = listbox.locator(`[role="option"]:has-text("${data.nationality}"), li:has-text("${data.nationality}")`).first();
-        if (await opt.isVisible({ timeout: 1200 }).catch(() => false)) {
-          await opt.click({ force: true });
+      const curNat = await natGroup.innerText().catch(() => '');
+      if (!curNat.includes(data.nationality || 'United Arab Emirates')) {
+        const natCombobox = natGroup.locator('[role="combobox"]').first();
+        if (await natCombobox.isVisible({ timeout: 500 }).catch(() => false)) {
+          await natCombobox.click({ force: true });
+          const listbox = this.page.locator('[role="listbox"]').first();
+          const opt = listbox.locator(`[role="option"]:has-text("${data.nationality}"), li:has-text("${data.nationality}")`).first();
+          if (await opt.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await opt.click({ force: true });
+          }
         }
-        await this.page.locator('[role="listbox"]').waitFor({ state: 'hidden', timeout: 300 }).catch(() => {});
       }
     } catch {}
   }

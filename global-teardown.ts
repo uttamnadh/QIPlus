@@ -7,6 +7,10 @@ import * as path from 'path';
  * Automatically compiles allure-results into a fresh, updated Allure HTML report.
  */
 export default async function globalTeardown() {
+  if (process.env.ALLURE_SKIP === 'true') {
+    return;
+  }
+
   const resultsDir = path.join(__dirname, 'allure-results');
   const reportDir = path.join(__dirname, 'allure-report');
 

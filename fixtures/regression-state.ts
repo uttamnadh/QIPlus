@@ -17,6 +17,7 @@ export interface RegressionState {
   mrn: string;
   complianceApproved?: boolean;
   finalApproved?: boolean;
+  auditorVerified?: boolean;
   records: MerchantRecordInfo[];
 }
 
@@ -45,6 +46,8 @@ export function loadRegressionState(): RegressionState {
       const parsed = JSON.parse(content);
       return {
         mrn: parsed.mrn || '',
+        complianceApproved: parsed.complianceApproved,
+        finalApproved: parsed.finalApproved,
         records: Array.isArray(parsed.records) ? parsed.records : (parsed.mrn ? [{ mrn: parsed.mrn, tradeName: '', legalName: '', shareholderType: 'Individual' }] : []),
       };
     }

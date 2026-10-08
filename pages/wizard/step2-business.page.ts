@@ -105,26 +105,12 @@ export class Step2BusinessPage extends BaseWizardPage {
     yearsInOperation: string;
     customerCountries: readonly string[];
   }) {
-    // 1. Lightning-fast batch fill for all numeric & text inputs
-    await this.fastFillReact({
-      'textarea[name*="product" i], textarea': data.primaryProducts,
-      'input[name*="expectedMonthlyVolume" i], input[id*="expectedMonthlyVolume" i]': data.expectedMonthlyVolume,
-      'input[name*="expectedMonthlyCount" i], input[id*="expectedMonthlyCount" i]': data.expectedMonthlyCount,
-      'input[name*="averageTransactionValue" i], input[id*="averageTransactionValue" i]': data.averageTransactionValue,
-      'input[name*="yearsInOperation" i], input[id*="yearsInOperation" i]': data.yearsInOperation,
-    });
-
-    // Fallbacks if not populated
-    const volInput = this.page.getByLabel('Expected Monthly Transaction Volume').first();
-    if (await volInput.isVisible({ timeout: 200 }).catch(() => false)) {
-      if ((await volInput.inputValue().catch(() => '')) !== data.expectedMonthlyVolume) {
-        await this.fillPrimaryProducts(data.primaryProducts).catch(() => {});
-        await this.fillExpectedMonthlyVolume(data.expectedMonthlyVolume).catch(() => {});
-        await this.fillExpectedMonthlyCount(data.expectedMonthlyCount).catch(() => {});
-        await this.fillAverageTransactionValue(data.averageTransactionValue).catch(() => {});
-        await this.fillYearsInOperation(data.yearsInOperation).catch(() => {});
-      }
-    }
+    // Direct reliable fills
+    await this.fillPrimaryProducts(data.primaryProducts);
+    await this.fillExpectedMonthlyVolume(data.expectedMonthlyVolume);
+    await this.fillExpectedMonthlyCount(data.expectedMonthlyCount);
+    await this.fillAverageTransactionValue(data.averageTransactionValue);
+    await this.fillYearsInOperation(data.yearsInOperation);
 
     await this.selectCustomerCountries(data.customerCountries).catch(() => {});
   }

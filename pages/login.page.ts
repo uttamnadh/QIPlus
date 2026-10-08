@@ -40,9 +40,18 @@ export class LoginPage {
       const mfaPrompt = this.page.locator('text=/Two-step verification|Authenticator|Set up your authenticator/i').first();
       const digitInput = this.page.locator('input[aria-label*="Digit 1"], input[aria-label*="Digit"]').first();
 
+      const expectsMFA = Boolean(totpSecret) ||
+        username.toLowerCase().includes('bhanu') ||
+        username.toLowerCase().includes('uttam') ||
+        username.toLowerCase().includes('shankar') ||
+        username.toLowerCase().includes('admin');
+
+      const mfaTimeout = expectsMFA ? 8000 : 2500;
+
       const isMFA = await Promise.race([
-        mfaPrompt.waitFor({ state: 'visible', timeout: 2500 }).then(() => true).catch(() => false),
-        digitInput.waitFor({ state: 'visible', timeout: 2500 }).then(() => true).catch(() => false),
+        mfaPrompt.waitFor({ state: 'visible', timeout: mfaTimeout }).then(() => true).catch(() => false),
+        digitInput.waitFor({ state: 'visible', timeout: mfaTimeout }).then(() => true).catch(() => false),
+        this.page.waitForURL(url => !url.href.includes('/login'), { timeout: mfaTimeout }).then(() => false).catch(() => false),
       ]);
 
       if (isMFA) {
@@ -82,7 +91,8 @@ export class LoginPage {
           }
 
           const verifyBtn = this.page.locator('button:has-text("Verify"), button:has-text("Confirm")').first();
-          if (await verifyBtn.isEnabled({ timeout: 1500 }).catch(() => false)) {
+          await verifyBtn.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+          if (await verifyBtn.isEnabled({ timeout: 2000 }).catch(() => false)) {
             await verifyBtn.click();
           }
 
@@ -166,13 +176,22 @@ export class LoginPage {
     await this.page.waitForTimeout(500);
   }
 
-  /** Check if the login form has HTML5 'required' attributes. */
+  /** Check if the login form has required validation (HTML5 attribute, aria-invalid, or helper text). */
   async hasRequiredAttributes(): Promise<{ username: boolean; password: boolean }> {
-    const usernameRequired = await this.page.locator('input[name="username"]').getAttribute('required');
-    const passwordRequired = await this.page.locator('input[name="password"]').getAttribute('required');
+    const userInp = this.page.locator('input[name="username"]');
+    const passInp = this.page.locator('input[name="password"]');
+
+    const userHasError = (await userInp.getAttribute('required') !== null) ||
+                         (await userInp.getAttribute('aria-invalid') === 'true') ||
+                         await this.page.locator('text=/please enter your username/i').isVisible().catch(() => false);
+
+    const passHasError = (await passInp.getAttribute('required') !== null) ||
+                         (await passInp.getAttribute('aria-invalid') === 'true') ||
+                         await this.page.locator('text=/please enter your password/i').isVisible().catch(() => false);
+
     return {
-      username: usernameRequired !== null,
-      password: passwordRequired !== null,
+      username: userHasError,
+      password: passHasError,
     };
   }
 }

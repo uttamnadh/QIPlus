@@ -1,3 +1,12 @@
+/**
+ * ============================================================================
+ * Scenario 2: 8-Step Merchant Onboarding Wizard (Positive E2E Suite)
+ *
+ * Framework Architect & Lead Automation Engineer: Bhanu Kiran
+ * Copyright (c) 2026 Bhanu Kiran. All rights reserved.
+ * ============================================================================
+ */
+
 import { test, expect } from '../../fixtures/diagnostics';
 import { Page, BrowserContext } from '@playwright/test';
 import { DashboardPage } from '../../pages/dashboard.page';
@@ -18,6 +27,7 @@ import * as path from 'path';
 const runOptions = getOrPromptRunOptions();
 const TOTAL_RECORDS = runOptions.recordCount;
 const SHAREHOLDER_MODE = runOptions.shareholderType;
+const MAX_STEP = runOptions.maxStep || parseInt(process.env.MAX_STEP || '8', 10) || 8;
 const initialShareholderType: ShareholderType = SHAREHOLDER_MODE === 'Entity' ? 'Entity' : 'Individual';
 
 let MERCHANT = getMerchantData('positive', initialShareholderType);
@@ -100,6 +110,16 @@ async function runWizardSteps(page: Page, merchant: any, maxStep: number = 8): P
 test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   let ctx: BrowserContext;
   let page: Page;
+  let isNormallyClosed = false;
+  let forceCloseLogged = false;
+
+  const logForceClosed = (msg: string) => {
+    if (isNormallyClosed || forceCloseLogged) return;
+    forceCloseLogged = true;
+    console.log('\n============================================================');
+    console.log(`🚨 [FORCE CLOSED] ${msg}`);
+    console.log('============================================================\n');
+  };
 
   test.beforeAll(async ({ browser }) => {
     test.setTimeout(Math.max(180000, TOTAL_RECORDS * 120000));
@@ -109,13 +129,29 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
 
     ctx = await browser.newContext();
     page = await ctx.newPage();
+
+    page.on('close', () => {
+      logForceClosed('Browser window was closed while test was running!');
+    });
+
+    browser.on('disconnected', () => {
+      logForceClosed('Browser was disconnected / closed by user!');
+    });
+
     // Login as onboarding officer (Sukesh)
     const loginPage = new LoginPage(page);
     await loginPage.navigate();
     await loginPage.login(ROLES.onboarding.username, ROLES.onboarding.password);
-    await page.waitForURL('**/dashboard', { timeout: 15000 }).catch(() => {});
+    await page.waitForURL('**/dashboard', { timeout: 20000 });
+    await expect(page.locator('text=/Dashboard|New registration|Create Merchant/i').first()).toBeVisible({ timeout: 10000 });
 
     console.log(`[POSITIVE Suite] Initializing run (${TOTAL_RECORDS} record(s), Mode: ${SHAREHOLDER_MODE}): ${MERCHANT.tradeName} (TRN: ${MERCHANT.trn}, Licence: ${MERCHANT.licence.number})`);
+  });
+
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.error?.message?.match(/Target.*closed|browser.*closed|has been closed|TargetClosedError/i)) {
+      logForceClosed('Test execution aborted: Browser window was closed by user!');
+    }
   });
 
   test.afterAll(async () => {
@@ -161,8 +197,14 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     }
 
     if (batchResults.length > 1) {
+      const headerText = highestStepCompleted >= 8
+        ? `🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS SUBMITTED (Review)`
+        : (highestStepCompleted === 1
+            ? `🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS SAVED (Step 1 Completed)`
+            : `🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS SAVED (Steps 1 to ${highestStepCompleted} Completed)`);
+
       console.log('\n========================================================================================================');
-      console.log(`🎉 BATCH ONBOARDING RUN COMPLETED: ${batchResults.filter(r => r.success).length}/${TOTAL_RECORDS} RECORDS COMPLETED (Up to Step ${highestStepCompleted})`);
+      console.log(headerText);
       console.log('========================================================================================================');
       console.log(
         '#'.padEnd(4) + '| ' +
@@ -171,10 +213,19 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
         'SHAREHOLDER'.padEnd(15) + '| ' +
         'STATUS'
       );
-      console.log('----+-------------------------------------+-------------------+----------------+------------------------');
+      console.log('----+-------------------------------------+-------------------+----------------+--------------------------------');
 
       batchResults.forEach((r) => {
-        const status = r.success ? `✅ Step ${highestStepCompleted} Done` : '❌ Failed';
+        let status = '❌ Failed';
+        if (r.success) {
+          if (highestStepCompleted >= 8) {
+            status = '✅ Submitted (Review)';
+          } else if (highestStepCompleted === 1) {
+            status = '✅ Step 1 Completed (Draft)';
+          } else {
+            status = `✅ Steps 1 to ${highestStepCompleted} Completed (Draft)`;
+          }
+        }
         const name = (r.tradeName || 'Merchant').substring(0, 34);
         console.log(
           String(r.index).padEnd(4) + '| ' +
@@ -187,6 +238,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
       console.log('========================================================================================================\n');
     }
 
+    isNormallyClosed = true;
     const basePage = new BaseWizardPage(page);
     await basePage.signOut().catch(() => {});
     await ctx?.close().catch(() => {});
@@ -201,17 +253,23 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
     await step1.fillAll(MERCHANT);
     await step1.clickSaveAndContinue();
 
+    await step1.expectStep(2);
+    highestStepCompleted = Math.max(highestStepCompleted, 1);
+
     const mrn = await step1.getRegistrationNumber().catch(() => '');
     if (mrn) {
       sharedState.mrn = mrn;
-      saveState({ mrn });
+      saveState({
+        mrn,
+        tradeName: MERCHANT.tradeName,
+        legalName: MERCHANT.legalName,
+        shareholderType: MERCHANT.shareholders[0].entityOrIndividual
+      });
     }
-
-    highestStepCompleted = Math.max(highestStepCompleted, 1);
-    await step1.expectStep(2);
   });
 
   test('Step 2 — Fill Business details and save', async () => {
+    test.skip(MAX_STEP < 2, 'Stopping before Step 2 per configuration');
     const step2 = new Step2BusinessPage(page);
     await step2.expectStep(2);
 
@@ -222,6 +280,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 3 — Fill Ownership (shareholder) details', async () => {
+    test.skip(MAX_STEP < 3, 'Stopping before Step 3 per configuration');
     const step3 = new Step3OwnershipPage(page);
     await step3.expectStep(3);
 
@@ -236,6 +295,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 4 — Fill UBO with Ownership basis (25% boundary)', async () => {
+    test.skip(MAX_STEP < 4, 'Stopping before Step 4 per configuration');
     const step4 = new Step4UBOsPage(page);
     await step4.expectStep(4);
 
@@ -248,6 +308,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 5 — Fill Signatories', async () => {
+    test.skip(MAX_STEP < 5, 'Stopping before Step 5 per configuration');
     const step5 = new Step5SignatoriesPage(page);
     await step5.expectStep(5);
 
@@ -259,6 +320,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 6 — Fill Banking details and save', async () => {
+    test.skip(MAX_STEP < 6, 'Stopping before Step 6 per configuration');
     test.setTimeout(Math.max(60000, TOTAL_RECORDS * 60000));
     const step6 = new Step6BankingPage(page);
     await step6.expectStep(6);
@@ -270,23 +332,13 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 7 — Upload documents and save', async () => {
+    test.skip(MAX_STEP < 7, 'Stopping before Step 7 per configuration');
     test.setTimeout(Math.max(60000, TOTAL_RECORDS * 60000));
     const step7 = new Step7DocumentsPage(page);
     await step7.expectStep(7);
 
-    console.log('--- STEP 7 DIAGNOSTICS ---');
-    const allFileInputs = page.locator('input[type="file"]');
-    const inputCount = await allFileInputs.count();
-    console.log(`[Step 7] input[type="file"] count: ${inputCount}`);
-
-    const allCards = page.locator('.MuiCard-root, .MuiPaper-root, .MuiAccordion-root, div.border');
-    console.log(`[Step 7] Cards count: ${await allCards.count()}`);
-
     const docPath = path.resolve(__dirname, '../../fixtures/dummy_1.png');
-    console.log(`[Step 7] Uploading document from: ${docPath}`);
     await step7.uploadAllDocuments(docPath);
-
-    await page.screenshot({ path: 'test-results/step7-live-after-upload.png', fullPage: true });
 
     await step7.clickSaveAndContinue();
     highestStepCompleted = Math.max(highestStepCompleted, 7);
@@ -294,6 +346,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 8 — Review data integrity and submit record', async () => {
+    test.skip(MAX_STEP < 8, 'Stopping before Step 8 per configuration');
     const step8 = new Step8ReviewPage(page);
     await step8.expectStep(8);
 
@@ -312,6 +365,7 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
   });
 
   test('Step 9 — Verify submitted record and process batch onboarding', async () => {
+    test.skip(MAX_STEP < 8, 'Skipping submitted verification because application was stopped before submit');
     test.setTimeout(Math.max(60000, TOTAL_RECORDS * 60000));
     const currentState = loadState();
     let targetMRN = currentState.mrn || sharedState.mrn;
@@ -444,8 +498,5 @@ test.describe.serial('02 — Onboarding wizard walkthrough', () => {
         });
       }
     }
-
-    const basePage = new BaseWizardPage(page);
-    await basePage.signOut();
   });
 });

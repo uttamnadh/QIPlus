@@ -2,7 +2,8 @@
 
 > **Comprehensive Reference & Execution Guide**  
 > **Target Application**: QiPlus Merchant Onboarding & Lifecycle Platform (`https://idms-uat.qiplus.ae`)  
-> **Framework**: Playwright + TypeScript + Allure 2 Report Engine  
+> **Framework Architect**: **Bhanu Kiran** (QA Automation Lead)  
+> **Stack**: Playwright + TypeScript + Allure 2 Report Engine  
 > **Total Test Specs**: **4 Modular Specs** + **1 Consolidated Pipeline** across 3 Sequential User Roles
 
 ---
@@ -259,16 +260,33 @@ flowchart LR
 
 ---
 
-## 6. Multi-Role Status Transition Audit
+## 6. Auditor Review & Verification Workflow (Step 11)
 
-**Spec**: `tests/positive/05-status-transitions.spec.ts`  
-**Scope**: Cross-Role Session Inspection
+**Spec**: `tests/positive/05-auditor.spec.ts`  
+**Role**: Auditor (`auditor` / `Passw0rd!`)
 
-| User Role | User Credentials | Target Queue / Table | Expected MRN Status Badge |
-|:---|:---|:---|:---|
-| **Onboarding Officer** | `Sukesh` | Submitted Registrations | `Submitted for review` |
-| **Compliance Officer** | `bhanu` | Verification Approved Queue | `Approved` |
-| **Final Approver** | `uttamnadh` | Approved Merchants Portal | `Active` |
+```mermaid
+flowchart LR
+    A[Login as auditor] --> B[Open Merchant Search]
+    B --> C[Filter strictly by target MRN]
+    C --> D[Open Merchant Profile Audit View]
+    D --> E[Verify Read-Only Integrity across 7 Sections]
+    E --> F[Open Audit Logs /audit/logs]
+    F --> G[Search MRN & Verify Complete Lifecycle Trail]
+    G --> H[Sign Out]
+```
+
+### Auditor Capabilities & Verification Scope:
+- **Merchant Directory Search**: Verifies that the activated MRN is indexed in the global Merchant Search directory with matching Legal Name, Enrollment Officer (`Sukesh`), submission date, and status.
+- **Read-Only Profile Integrity**: Clicks the merchant row to open `/merchants/<mrn>` and asserts the read-only presentation across 7 core audit sections:
+  1. `Registration` (TRN, Incorporation Date, Country)
+  2. `Licence` (Authority, Number, Validity Dates)
+  3. `Contact & banking` (Authorized Contact, Phone, IBAN)
+  4. `Business profile` (Volumes, Activity, Countries)
+  5. `Ownership & control` (Shareholders, UBOs, Signatories)
+  6. `Submitted documents` (All 16 supporting documents)
+  7. `Activity history` (Chronological timeline)
+- **Lifecycle Audit Trail (`/audit/logs`)**: Filters the audit log table by target MRN and asserts the presence of all chronological events (`Create merchant`, `Save profile step`, `Save banking step`, `Submit documents bulk`, `Submit merchant`, `Emcrey screen`, `Review merchant`, and approver activations) with `Success` status.
 
 ---
 
@@ -285,11 +303,11 @@ if (!state.submitted || !state.mrn) {
 ```
 
 - If `02-onboarding-wizard.spec.ts` encounters an unexpected blocker:
-  - Downstream reviewer specs (`03-compliance-review.spec.ts`, `04-final-approval.spec.ts`, and `05-status-transitions.spec.ts`) **skip cleanly without executing logins or generating false-negative failures**.
+  - Downstream reviewer specs (`03-compliance-review.spec.ts` and `04-final-approval.spec.ts`) **skip cleanly without executing logins or generating false-negative failures**.
 
 ---
 
-## 8. Execution Commands & Troubleshooting
+## 7. Execution Commands & Troubleshooting
 
 ### 🚀 Interactive Batch Runner (Multi-Record Onboarding)
 
@@ -316,7 +334,10 @@ npx playwright test tests/positive/03-compliance-review.spec.ts --headed
 # 5. Run Final Approval & Activation spec
 npx playwright test tests/positive/04-final-approval.spec.ts --headed
 
-# 6. Generate and open Allure HTML Report with historical trends
+# 6. Run Auditor Verification & Audit Logs spec
+npx playwright test tests/positive/05-auditor.spec.ts --headed
+
+# 7. Generate and open Allure HTML Report with historical trends
 npm run allure:generate
 npm run allure:open
 ```

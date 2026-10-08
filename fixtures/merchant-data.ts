@@ -1,3 +1,12 @@
+/**
+ * ============================================================================
+ * QiPlus Merchant Test Data & Lifecycle Fixtures
+ *
+ * Framework Architect & Lead Automation Engineer: Bhanu Kiran
+ * Copyright (c) 2026 Bhanu Kiran. All rights reserved.
+ * ============================================================================
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -212,6 +221,7 @@ export const ROLES = {
   onboarding: { username: 'Sukesh', password: 'Qa@12345', roleLabel: 'Onboarding officer', totpSecret: '' },
   compliance: { username: 'bhanu', password: 'Qa@123456789', roleLabel: 'Compliance officer', totpSecret: 'O5JK3K56FHMKGX67KMQAS65YSXXTAAT4' },
   approver:   { username: 'uttamnadh', password: 'Qa@123456789', roleLabel: 'Final approver', totpSecret: 'H2SG6MBNDHY4OFPOYBB2WHVGTZAMYT23' },
+  auditor:    { username: 'auditor', password: 'Passw0rd!', roleLabel: 'Auditor', totpSecret: '' },
   userManagement: { username: 'shankar', password: 'Passw0rd!', roleLabel: 'User management', totpSecret: 'CUZN3ZAJKZPNBMQRK5LD33D3YVWE6K7N' },
 } as const;
 
@@ -227,6 +237,7 @@ export interface PipelineState {
   complianceApproved: boolean;
   onHold?: boolean;
   finalApproved?: boolean;
+  auditorVerified?: boolean;
 }
 
 /** Save MRN and status flags to disk to persist across test process runs. */
@@ -274,6 +285,7 @@ export function printMerchantSubmissionSummary(data: {
     console.log(`👤 UBO           : ${data.uboName} (Share: ${data.uboShare || '100'}%)`);
   }
   console.log(`📊 STEP 7 UPLOADS: ${data.step7Status || 'All mandatory documents uploaded & verified'}`);
+  console.log('👤 ARCHITECT      : Bhanu Kiran (QA Automation Lead)');
   console.log('============================================================\n');
 }
 
@@ -290,6 +302,7 @@ export function printMerchantDraftSummary(data: {
   console.log(`📌 MERCHANT NAME : ${data.tradeName}${data.legalName ? ` (${data.legalName})` : ''}`);
   console.log(`📄 MRN NUMBER    : ${data.mrn || 'N/A'}`);
   console.log(`📊 QUEUE STATUS  : ${data.status || 'Draft'}`);
+  console.log('👤 ARCHITECT     : Bhanu Kiran (QA Automation Lead)');
   console.log('============================================================\n');
 }
 

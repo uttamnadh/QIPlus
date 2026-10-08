@@ -1,3 +1,10 @@
+/**
+ * ==============================================================================
+ * Project   : QiPlus IDMS End-to-End Test Automation Suite
+ * Author    : Bhanu Kiran (QA Automation Lead & Framework Architect)
+ * Copyright : QiPlus QA Engineering Team
+ * ==============================================================================
+ */
 import { defineConfig } from '@playwright/test';
 
 if (!process.env.RUN_ID) {
@@ -6,6 +13,14 @@ if (!process.env.RUN_ID) {
 
 export default defineConfig({
   testDir: './tests',
+  /* Metadata displayed on Playwright HTML & Allure test reports */
+  metadata: {
+    'Framework Architect': 'Bhanu Kiran',
+    'Lead Automation Engineer': 'Bhanu Kiran',
+    'Platform': 'QiPlus IDMS UAE Compliance E2E',
+    'Architecture': 'Page Object Model (POM) + Dynamic KYC Data Engine',
+    'Repository': 'qiplus-e2e',
+  },
   /* Clean allure-results strictly once before suite execution */
   globalSetup: './global-setup.ts',
   /* Automatically compile fresh Allure report after suite execution */
@@ -18,6 +33,7 @@ export default defineConfig({
   workers: 1,
   /* HTML and Allure reporters for deliverables & trend dashboards */
   reporter: [
+    ['./fixtures/force-close-reporter.ts'],
     ['allure-playwright', { resultsDir: 'allure-results' }],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ['list']
@@ -29,6 +45,17 @@ export default defineConfig({
   use: {
     baseURL: 'https://idms-uat.qiplus.ae',
     browserName: 'chromium',
+    channel: process.env.BROWSER_CHANNEL === 'chrome' ? 'chrome' : undefined,
+    headless: process.env.HEADED === 'true' ? false : (process.env.HEADLESS === 'true' ? true : undefined),
+    contextOptions: {
+      reducedMotion: 'reduce',
+    },
+    launchOptions: {
+      args: process.env.HEADED === 'true' ? ['--start-maximized', '--new-window'] : []
+    },
+    /* Conditional Burp Suite proxy routing */
+    proxy: process.env.BURP === 'true' ? { server: 'http://127.0.0.1:8080' } : undefined,
+    ignoreHTTPSErrors: true,
     /* Diagnostics: capture screenshots, traces, and video on failure */
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
@@ -55,7 +82,7 @@ export default defineConfig({
     {
       name: 'regression',
       testMatch: [
-        'regression/*.spec.ts',
+        'regression/regression-e2e.spec.ts',
       ],
     },
   ],

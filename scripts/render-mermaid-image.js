@@ -1,0 +1,259 @@
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+
+const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QiPlus Interactive Mermaid Flowchart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #030712;
+      color: #f1f5f9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+    }
+    #export-container {
+      width: 1320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header-card {
+      width: 100%;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 16px;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+    }
+    .title-group h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .title-group p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 5px;
+    }
+    .badge {
+      background: rgba(14, 165, 233, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #diagram-wrap {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 18px;
+      padding: 40px 32px;
+      box-shadow: 0 25px 45px -10px rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+    }
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    /* Mermaid styling overrides */
+    .cluster rect {
+      fill: rgba(15, 23, 42, 0.75) !important;
+      stroke: #334155 !important;
+      stroke-width: 1.5px !important;
+      rx: 12px !important;
+    }
+    .cluster text {
+      fill: #38bdf8 !important;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    .edgeLabel {
+      background-color: #030712 !important;
+      color: #cbd5e1 !important;
+      font-size: 11.5px !important;
+      padding: 3px 8px !important;
+      border-radius: 6px !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    .node rect, .node circle, .node ellipse, .node polygon {
+      rx: 8px !important;
+      ry: 8px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="export-container">
+    <div class="header-card">
+      <div class="title-group">
+        <h1><span>⚡</span> QiPlus Multi-Role Onboarding & Approval Workflow</h1>
+        <p>Interactive Architecture & State Machine: Onboarding Officer ➔ Compliance ➔ eMcREY AML Screening ➔ Final Approver</p>
+      </div>
+      <div class="badge">Verified Workflow Flowchart</div>
+    </div>
+
+    <div id="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    %% Role 1
+    subgraph R1["ROLE 1: ONBOARDING OFFICER (Sukesh)"]
+        direction TB
+        NEW_REG["New Registration"] --> STEPS["Fill Steps 1–7<br/>(Profile, Business, UBOs, Bank, Docs)"]
+        STEPS --> STEP8["Step 8: Review & Submit<br/>(Generates Unique MRN)"]
+        CLAR_LIST["'Returned for Clarification' List<br/>(Dedicated list — NOT Drafts)"]
+        RESUME["Click 'Resume editing'<br/>• Fix fields/documents<br/>• Re-submit through Step 8"]
+        CLAR_LIST --> RESUME
+        RESUME --> STEP8
+    end
+
+    %% Role 2
+    subgraph R2["ROLE 2: COMPLIANCE OFFICER (bhanu)"]
+        direction TB
+        COMP_QUEUE["Compliance Verification Queue<br/>Status: 'Submitted'"]
+        COMP_HOLD["Compliance 'On-hold' List"]
+        COMP_REL["Release from Hold<br/>(Resumes Verification)"]
+        COMP_HOLD --> COMP_REL
+        COMP_REL --> COMP_QUEUE
+    end
+
+    %% Role 3: eMcREY
+    subgraph EMC["eMcREY AML BACKGROUND SCREENING"]
+        direction TB
+        EMC_SCREEN["eMcREY Background Engine<br/>Watchlist, PEP & Sanctions"]
+        EMC_LOCKED["🔒 DECISION LOCKED<br/>• Status: HIT or ON-HOLD<br/>• Notes & buttons disabled<br/>• Approver CANNOT decide"]
+        EMC_UNLOCKED["🔓 DECISION UNLOCKED<br/>• Status: CLEAR (Low Risk)<br/>Status: 'Pending Final Approval'"]
+    end
+
+    %% Role 4: Approver
+    subgraph R3["ROLE 3: FINAL APPROVER (uttamnadh)"]
+        direction TB
+        APPR_QUEUE["Final Approval Queue"]
+    end
+
+    %% Terminal Registers
+    subgraph REG["UNIVERSAL REGISTERS & TERMINAL STATES"]
+        direction LR
+        REJ_LIST["UNIVERSAL REJECTED LIST<br/>• Onboarding Officer Portal<br/>• Compliance Officer Portal<br/>• Final Approver Portal"]
+        ACTIVE_DIR["STATUS: 'ACTIVE MERCHANT'<br/>• Approved Merchants List<br/>• Global Merchant Search"]
+    end
+
+    %% Forward Flow
+    STEP8 -->|"Submit (MRN)"| COMP_QUEUE
+    COMP_QUEUE -->|"(Decision 4: Approve & Forward)"| EMC_SCREEN
+    EMC_SCREEN -->|"[Status: CLEAR]"| EMC_UNLOCKED
+    EMC_UNLOCKED --> APPR_QUEUE
+    APPR_QUEUE -->|"(Decision 1: Direct Approve & Activate)"| ACTIVE_DIR
+
+    %% Feedback loops reversed in Dagre ranking
+    CLAR_LIST <-.-|"(Decision 1: Return for Clarification)"| COMP_QUEUE
+    COMP_QUEUE -->|"(Decision 2: Reject)"| REJ_LIST
+    COMP_QUEUE -->|"(Decision 3: Compliance On-Hold)"| COMP_HOLD
+
+    %% eMcREY Lock
+    EMC_SCREEN -->|"[Status: HIT / ON-HOLD]"| EMC_LOCKED
+
+    %% Approver Decision Branches
+    COMP_REL <-.-|"(Decision 2: Final On-Hold) Back to Compliance"| APPR_QUEUE
+    APPR_QUEUE -->|"(Decision 3: Reject)"| REJ_LIST
+
+    %% Styling classes
+    classDef roleBox fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#fff;
+    classDef alertBox fill:#2d1f05,stroke:#f59e0b,stroke-width:2px,color:#fff;
+    classDef lockedBox fill:#2b0e11,stroke:#ef4444,stroke-width:2px,color:#fff;
+    classDef successBox fill:#0d2818,stroke:#22c55e,stroke-width:2px,color:#fff;
+
+    class NEW_REG,STEPS,STEP8,COMP_QUEUE,APPR_QUEUE,EMC_SCREEN roleBox;
+    class CLAR_LIST,RESUME,COMP_HOLD,COMP_REL alertBox;
+    class EMC_LOCKED,REJ_LIST lockedBox;
+    class EMC_UNLOCKED,ACTIVE_DIR successBox;
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#0f172a',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#64748b',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#090d16',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px'
+      },
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+  </script>
+</body>
+</html>`;
+
+const standalonePath = path.resolve('docs/diagrams/mermaid-standalone.html');
+fs.writeFileSync(standalonePath, htmlContent);
+console.log(`[PASS] Written ${standalonePath}`);
+
+(async () => {
+  console.log('Launching headless Chromium to render high-res Mermaid image...');
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1800 },
+    deviceScaleFactor: 2 // High DPI retina sharpness
+  });
+
+  const fileUrl = 'file:///' + standalonePath.replace(/\\/g, '/');
+  await page.goto(fileUrl, { waitUntil: 'networkidle' });
+
+  // Wait for mermaid SVG rendering
+  await page.waitForSelector('.mermaid svg', { timeout: 15000 });
+  await page.waitForTimeout(1500); // Allow fonts to settle
+
+  const exportElement = page.locator('#export-container');
+  const targetPng = path.resolve('docs/diagrams/qiplus-interactive-mermaid-flowchart.png');
+  const brainDir = 'C:/Users/Kiran/.gemini/antigravity/brain/28b11e43-b995-4e62-8755-83298085b429';
+  const brainPng = path.join(brainDir, 'qiplus-interactive-mermaid-flowchart.png');
+
+  await exportElement.screenshot({ path: targetPng });
+  console.log(`[PASS] Saved high-res screenshot: ${targetPng}`);
+
+  if (fs.existsSync(brainDir)) {
+    fs.copyFileSync(targetPng, brainPng);
+    console.log(`[PASS] Copied to artifact directory: ${brainPng}`);
+  }
+
+  await browser.close();
+  console.log('Mermaid image rendering complete!');
+})();

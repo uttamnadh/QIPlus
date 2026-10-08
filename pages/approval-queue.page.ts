@@ -10,22 +10,24 @@ export class ApprovalQueuePage {
 
   /** Navigate to the approval queue via sidebar. */
   async navigateToApprovalQueue() {
+    const link = this.page.locator('button:has-text("Approval queue"), a:has-text("Approval queue"), nav :text("Approval queue"), [href*="/merchants/approval"]').first();
+    if (await link.isVisible({ timeout: 500 }).catch(() => false)) {
+      await link.click();
+      return;
+    }
+
     const backBtn = this.page.locator('button:has-text("Back")').first();
-    if (await backBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await backBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await backBtn.click();
     }
-
-    const link = this.page.locator('button:has-text("Approval queue"), a:has-text("Approval queue"), nav :text("Approval queue")').first();
-    if (await link.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await link.click();
-    } else {
-      await this.page.click('text="Approval queue"');
-    }
+    await this.page.click('text="Approval queue"').catch(() => {});
   }
 
-  /** Filter by MRN or name. */
+  /** Filter by MRN or name/company name. */
   async filterByMRN(mrn: string) {
-    const input = this.page.getByPlaceholder('Filter by MRN or name');
+    const input = this.page.getByPlaceholder('Filter by MRN or company name')
+      .or(this.page.getByPlaceholder('Filter by MRN or name'))
+      .or(this.page.locator('input[placeholder*="MRN" i], input[placeholder*="Filter" i]')).first();
     await input.click();
     await input.fill(mrn);
     await this.page.keyboard.press('Enter');
@@ -57,122 +59,58 @@ export class ApprovalQueuePage {
 
   /** Approve the currently open merchant. */
   async approveMerchant(notes: string = 'Final approval granted.') {
-    // Check if merchant has screening hit
-    const isScreeningHit = await this.page.locator('text=/Screening hit|case opened for compliance review/i').first().isVisible({ timeout: 1500 }).catch(() => false);
-    if (isScreeningHit) {
-      console.log('[ApprovalQueue] ℹ️ Record has Screening Hit — no approval decision can be taken by Final Approver.');
+    const notesInput = this.page.locator('textarea, [role="textbox"], input[name="notes"]').first();
+    await notesInput.waitFor({ state: 'visible', timeout: 5000 });
+    const isEditable = await notesInput.isEditable().catch(() => false);
+    if (!isEditable) {
+      console.log('[ApprovalQueue] ℹ️ Decision notes is disabled / locked — cannot take decision in final approver.');
       return;
     }
 
-    const notesInput = this.page.locator('textarea, [role="textbox"], input[name="notes"]').first();
-    await notesInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-
-    // If Decision notes is disabled (screening still running), refresh ONLY ONCE to check if enabled
-    for (let reloadAttempt = 1; reloadAttempt <= 1; reloadAttempt++) {
-      if (await notesInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        const isEditable = await notesInput.isEditable().catch(() => false);
-        if (isEditable) break;
-
-        const checkHit = await this.page.locator('text=/Screening hit|case opened for compliance review/i').first().isVisible({ timeout: 500 }).catch(() => false);
-        if (checkHit) {
-          console.log('[ApprovalQueue] ℹ️ Record transitioned to Screening Hit — decision buttons are locked.');
-          return;
-        }
-
-        console.log(`[ApprovalQueue] Decision notes disabled. Refreshing screening ONLY ONCE to confirm status...`);
-        await this.page.waitForTimeout(2000);
-        await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-        await this.page.waitForTimeout(1000);
-      }
-    }
-
-    if (await notesInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const isEditable = await notesInput.isEditable().catch(() => false);
-      if (!isEditable) {
-        console.log('[ApprovalQueue] ℹ️ Decision notes is disabled (record is On-hold / Under compliance review) — cannot take decision in final approver.');
-        return;
-      }
-      await notesInput.focus();
-      await notesInput.fill(notes);
-      await notesInput.press('Space');
-      await notesInput.press('Backspace');
-      await notesInput.blur();
-      await this.page.waitForTimeout(300);
-    }
+    await notesInput.fill(notes);
 
     const approveBtn = this.page.locator('button:has-text("Approve & Activate"), button:has-text("Approve & activate"), button:has-text("Approve")').first();
-    if (await approveBtn.isEnabled({ timeout: 5000 }).catch(() => false)) {
-      await approveBtn.click();
+    await expect(approveBtn).toBeEnabled({ timeout: 5000 });
+    await approveBtn.click();
 
-      // Handle confirmation dialog reliably
-      const confirmBtn = this.page.locator('[role="dialog"] button:has-text("Confirm"), .MuiDialog-paper button:has-text("Confirm"), [role="dialog"] button:has-text("Approve")').first();
-      if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await confirmBtn.click();
-      }
-
-      // Ensure any modal backdrop is unmounted
-      const dialog = this.page.locator('.MuiDialog-root, [role="dialog"]').first();
-      if (await dialog.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await dialog.waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
-      }
-    } else {
-      console.log('[ApprovalQueue] Approve & Activate button is not enabled.');
+    // Handle confirmation dialog reliably
+    const confirmBtn = this.page.locator('[role="dialog"] button:has-text("Confirm"), .MuiDialog-paper button:has-text("Confirm"), [role="dialog"] button:has-text("Approve")').first();
+    if (await confirmBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await confirmBtn.click();
+      await this.page.locator('.MuiDialog-root, .MuiBackdrop-root').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     }
   }
 
   /** Verify trade name on review. */
   async expectTradeName(tradeName: string) {
-    await expect(this.page.locator(`text="${tradeName}"`).first()).toBeVisible();
+    await expect(this.page.locator(`text="${tradeName}"`).first()).toBeVisible({ timeout: 3000 });
   }
 
   /**
-   * Wait for a record to appear in the Approval Queue with retry polling logic.
-   * eMcREY AML SCREENING: Record will only land in Approval Queue after eMcREY
-   * finishes processing the compliance approval. This method refreshes the queue
-   * up to maxAttempts times with delayMs delay.
+   * Wait for a record to appear in the Approval Queue with fast retry polling logic.
+   * Polling interval is optimized to 1s.
    */
-  async waitForRecordInApprovalQueue(targetMRN: string, maxAttempts: number = 10, delayMs: number = 5000): Promise<boolean> {
-    let matchingRowFound = false;
-
+  async waitForRecordInApprovalQueue(targetMRN: string, maxAttempts: number = 8, delayMs: number = 1000): Promise<boolean> {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`[ApprovalQueue] Checking Approval Queue for MRN ${targetMRN} (eMcREY screening) — attempt ${attempt}/${maxAttempts}`);
+      console.log(`[ApprovalQueue] Checking Approval Queue for MRN ${targetMRN} (attempt ${attempt}/${maxAttempts})`);
 
       await this.navigateToApprovalQueue().catch(() => {});
       await this.filterByMRN(targetMRN);
 
       const matchingRow = this.page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-      const isVisible = await matchingRow.isVisible({ timeout: 2500 }).catch(() => false);
+      const isVisible = await matchingRow.isVisible({ timeout: 1500 }).catch(() => false);
 
       if (isVisible) {
-        matchingRowFound = true;
         const rowText = await matchingRow.innerText().catch(() => '');
-        console.log(`[ApprovalQueue] Found MRN ${targetMRN} in Approval Queue on attempt ${attempt}. Row: ${rowText.replace(/\n+/g, ' | ')}`);
-
-        // If row is still Pending Screening, wait and refresh!
-        if (/Pending\s+Screening/i.test(rowText)) {
-          console.log(`[ApprovalQueue] MRN ${targetMRN} is still "Pending Screening". Waiting ${delayMs / 1000}s before refresh...`);
-        } else {
-          console.log(`[ApprovalQueue] ✅ Found MRN ${targetMRN} ready in Approval Queue on attempt ${attempt}.`);
-          await matchingRow.click();
-          await this.page.waitForTimeout(1000);
-          return true;
-        }
+        console.log(`[ApprovalQueue] ✅ Found MRN ${targetMRN} in Approval Queue on attempt ${attempt}. Opening record...`);
+        await matchingRow.click();
+        return true;
       }
 
       if (attempt < maxAttempts) {
-        console.log(`[ApprovalQueue] Record not yet ready in Approval Queue. Waiting ${delayMs / 1000}s before refresh (Attempt ${attempt}/${maxAttempts})...`);
         await this.page.waitForTimeout(delayMs);
         await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-        await this.page.waitForTimeout(1000);
       }
-    }
-
-    if (matchingRowFound) {
-      console.log(`[ApprovalQueue] ℹ️ MRN ${targetMRN} was found in Approval Queue; proceeding to open record.`);
-      const matchingRow = this.page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-      await matchingRow.click().catch(() => {});
-      await this.page.waitForTimeout(1000);
-      return true;
     }
 
     console.log(`[ApprovalQueue] ⚠️ MRN ${targetMRN} NOT found in Approval Queue after ${maxAttempts} attempts.`);
@@ -198,7 +136,7 @@ export class ApprovalQueuePage {
   /** Read screening result text (e.g. CLEAR / HIT / No Match). */
   async getScreeningResult(): Promise<string> {
     const screeningLocator = this.page.locator('text=/CLEAR|HIT|No Match|Potential Match|Passed/i').first();
-    if (await screeningLocator.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await screeningLocator.isVisible({ timeout: 600 }).catch(() => false)) {
       return await screeningLocator.innerText().catch(() => '');
     }
     return '';
@@ -206,19 +144,16 @@ export class ApprovalQueuePage {
 
   /** Navigate to Merchant Search directory. */
   async navigateToMerchantSearch() {
-    const backBtn = this.page.locator('button:has-text("Back")').first();
-    if (await backBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await backBtn.click();
-      await this.page.waitForTimeout(500);
-    }
+    // Wait for any active dialog or backdrop to finish closing
+    await this.page.locator('.MuiDialog-root, .MuiBackdrop-root').first().waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
 
-    const searchLink = this.page.locator('button:has-text("Merchant search"), a:has-text("Merchant search"), nav :text("Merchant search"), [href*="/merchants/search"]').first();
+    const searchLink = this.page.locator('a[href*="/merchants/search"], nav >> text="Merchant search"').first();
     if (await searchLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await searchLink.click();
+      await searchLink.click({ force: true });
     } else {
       await this.page.goto('/merchants/search', { waitUntil: 'domcontentloaded' }).catch(() => {});
     }
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForURL('**/merchants/search', { timeout: 10000 }).catch(() => {});
   }
 
   /**
@@ -229,26 +164,35 @@ export class ApprovalQueuePage {
     await this.navigateToApprovedMerchants().catch(() => {});
     await this.filterByMRN(mrn);
 
+    // Wait for skeleton loaders to finish
+    await this.page.locator('.MuiSkeleton-root').first().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+
     let row = this.page.locator(`tr:has-text("${mrn}"), [role="row"]:has-text("${mrn}")`).first();
-    let isVisible = await row.isVisible({ timeout: 3000 }).catch(() => false);
+    let isVisible = await row.waitFor({ state: 'visible', timeout: 4000 }).then(() => true).catch(() => false);
 
     if (!isVisible) {
       // Fallback to Merchant search
       await this.navigateToMerchantSearch().catch(() => {});
-      const searchInput = this.page.getByPlaceholder('Filter by MRN or name').or(this.page.locator('input[placeholder*="MRN" i], input[placeholder*="Search" i]')).first();
+      const searchInput = this.page.getByPlaceholder('Filter by MRN or company name')
+        .or(this.page.getByPlaceholder('Filter by MRN or name'))
+        .or(this.page.locator('input[placeholder*="MRN" i], input[placeholder*="Search" i]')).first();
+
       if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
         await searchInput.click();
         await searchInput.fill(mrn);
         await this.page.keyboard.press('Enter');
-        await this.page.waitForTimeout(1000);
       }
+
+      // Wait for table skeletons to detach after search query
+      await this.page.locator('.MuiSkeleton-root').first().waitFor({ state: 'hidden', timeout: 12000 }).catch(() => {});
+
       row = this.page.locator(`tr:has-text("${mrn}"), [role="row"]:has-text("${mrn}")`).first();
-      isVisible = await row.isVisible({ timeout: 3000 }).catch(() => false);
+      isVisible = await row.waitFor({ state: 'visible', timeout: 12000 }).then(() => true).catch(() => false);
     }
 
     if (isVisible) {
       const activeBadge = row.locator('text=/Active/i').first();
-      await expect(activeBadge).toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(activeBadge).toBeVisible({ timeout: 5000 }).catch(() => {});
       const rowText = await row.innerText().catch(() => '');
       console.log(`[ApprovalQueue] ✅ Verified merchant ${mrn} is ACTIVE. Row: ${rowText.replace(/\n+/g, ' | ')}`);
       return true;
@@ -261,7 +205,7 @@ export class ApprovalQueuePage {
   async navigateToApprovedMerchants() {
     const backBtn = this.page.locator('button:has-text("Back")').first();
     if (await backBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await backBtn.click();
+      await backBtn.click().catch(() => {});
     }
 
     const link = this.page.locator('button:has-text("Approved merchants"), a:has-text("Approved merchants"), nav :text("Approved merchants")').first();

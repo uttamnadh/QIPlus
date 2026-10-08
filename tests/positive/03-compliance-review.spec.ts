@@ -6,8 +6,14 @@ import { BaseWizardPage } from '../../pages/wizard/base-wizard.page';
 import { ROLES, loadState, saveState } from '../../fixtures/merchant-data';
 
 /**
- * Scenario 3: Compliance officer (bhanu) reviews the submitted merchant.
+ * ============================================================================
+ * Scenario 3: Compliance review & eMcREY Screening Polling
  *
+ * Framework Architect & Lead Automation Engineer: Bhanu Kiran
+ * Copyright (c) 2026 Bhanu Kiran. All rights reserved.
+ * ============================================================================
+ *
+ * Compliance officer (bhanu) reviews the submitted merchant.
  * AML SCREENING NOTE: "Approve & forward" triggers asynchronous screening by eMcREY.
  * The spec verifies the toast notification, then polls the Compliance Approved section
  * >5 times until the record transitions out of "Pending Screening" into
@@ -59,7 +65,7 @@ test.describe.serial('03 — Compliance review', () => {
     // Write decision notes and approve & forward
     // approveMerchant() fills mandatory decision notes, confirms modal, and verifies "Decision recorded" toast
     console.log(`[Compliance] Writing decision notes and approving MRN: ${targetMRN}`);
-    await queue.approveMerchant('Approved by compliance officer after verifying all documents.');
+    await queue.approveMerchant('Approved by compliance officer after verifying all documents. Verified by Bhanu Kiran.');
 
     saveState({ complianceApproved: true });
     
@@ -81,8 +87,7 @@ test.describe.serial('03 — Compliance review', () => {
     // eMcREY AML SCREENING: "Approve & forward" submits to eMcREY asynchronously.
     // Refresh >5 times (up to 10 attempts, 5s delay) until record arrives in Approved section
     // and transitions out of "Pending Screening" into "Pending final approval" or "Under compliance review".
-    console.log(`[POSITIVE] Polling Compliance Approved section for MRN ${targetMRN} (waiting for eMcREY screening)...`);
-    const result = await queue.waitForRecordInApproved(targetMRN, 10, 5000);
+    const result = await queue.waitForRecordInApproved(targetMRN, 8, 1000);
 
     expect(result.found, `MRN ${targetMRN} was not found in Compliance Approved section after eMcREY screening polling`).toBe(true);
 

@@ -54,28 +54,15 @@ export class Step6BankingPage extends BaseWizardPage {
     accountCurrency: string;
     accountType: string;
   }) {
-    // 1. Lightning-fast batch fill for text inputs
-    await this.fastFillReact({
-      'input[name="banking.accountHolderName"], input[id*="accountHolderName" i]': data.accountHolderName,
-      'input[name="banking.branchNameEmirate"], input[id*="branchNameEmirate" i]': data.branchNameEmirate,
-      'input[name="banking.iban"], input[id*="iban" i]': data.iban,
-      'input[name="banking.swiftBic"], input[id*="swiftBic" i]': data.swiftBic,
-    });
-
-    // Fallbacks
-    const acctInp = this.page.getByLabel('Account holder name *').first();
-    if (await acctInp.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await acctInp.inputValue().catch(() => '')) !== data.accountHolderName) {
-        await this.fillAccountHolderName(data.accountHolderName).catch(() => {});
-        await this.fillBranchNameEmirate(data.branchNameEmirate).catch(() => {});
-        await this.fillIBAN(data.iban).catch(() => {});
-        await this.fillSwiftBic(data.swiftBic).catch(() => {});
-      }
-    }
-
-    // 2. Dropdowns
+    // 1. Select dropdowns
     await this.selectBankName(data.bankName).catch(() => {});
     await this.selectAccountCurrency(data.accountCurrency).catch(() => {});
     await this.selectAccountType(data.accountType).catch(() => {});
+
+    // 2. Fill text fields reliably via labels
+    await this.page.getByLabel('Account holder name *').fill(data.accountHolderName);
+    await this.page.getByLabel('Branch name & emirate *').fill(data.branchNameEmirate);
+    await this.page.getByLabel('IBAN *').fill(data.iban);
+    await this.page.getByLabel('SWIFT / BIC code *').fill(data.swiftBic);
   }
 }

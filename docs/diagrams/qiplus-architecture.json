@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "QiPlus E2E Automation Architecture & Final Approver Decisions",
+    "subtitle": "Playwright Framework, eMcREY Screening, Compliance Loopbacks & 3 Final Approver Decisions",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Bhanukiran05/qiplus-e2e.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "8965434b2d49513238617756d8eccbe3f3280d31"
+    },
+    "output": "qiplus-architecture.html",
+    "views": [
+      {
+        "id": "final-decisions",
+        "label": "Final Approver 3 Decisions",
+        "focus": ["pom_approval", "final_approve", "final_onhold", "final_reject", "pom_compliance", "active_live"],
+        "note": "Shows Direct Approve & Activate, Final On-Hold loopback to Compliance, and Universal Reject"
+      },
+      {
+        "id": "compliance-emcrey",
+        "label": "Compliance & eMcREY Screening",
+        "focus": ["pom_wizard", "pom_compliance", "emcrey_engine", "pom_approval"],
+        "note": "Compliance verification triggering eMcREY AML screening with CLEAR, ON-HOLD, and HIT outcomes"
+      },
+      {
+        "id": "test-suites",
+        "label": "Playwright Suites & Runners",
+        "focus": ["jenkins", "runner", "suite_positive", "suite_negative", "suite_regression"],
+        "note": "Orchestration pipeline driving Positive, Negative and Regression suites"
+      }
+    ]
+  },
+  "components": [
+    { "id": "jenkins", "type": "cloud", "brand": "jenkins", "label": "Jenkins CI/CD", "sublabel": "Automated & Dispatch Runs", "pos": [40, 80], "size": [170, 58], "tag": "CI/CD", "sources": [{ "path": "Jenkinsfile", "line": 1 }] },
+    { "id": "vpn_guard", "type": "security", "label": "VPN Pre-Flight Guard", "sublabel": "Network Gateway Verifier", "pos": [40, 180], "size": [170, 58], "tag": "Pre-flight Check", "sources": [{ "path": "global-setup.ts", "line": 1 }] },
+    { "id": "launchpad", "type": "backend", "brand": "node-js", "label": "Launchpad Server", "sublabel": "Node.js Quick Runner UI", "pos": [40, 280], "size": [170, 58], "sources": [{ "path": "run-wizard.js", "line": 1 }] },
+    { "id": "runner", "type": "backend", "brand": "typescript", "label": "Playwright Test Runner", "sublabel": "Chromium, Headed / Headless", "pos": [40, 380], "size": [170, 58], "tag": "Core Engine", "sources": [{ "path": "playwright.config.ts", "line": 1 }] },
+
+    { "id": "suite_positive", "type": "frontend", "label": "Positive Happy Path", "sublabel": "Sequential 3-Role Lifecycle", "pos": [270, 80], "size": [180, 58], "sources": [{ "path": "tests/positive/02-onboarding-wizard.spec.ts", "line": 1 }] },
+    { "id": "suite_negative", "type": "security", "label": "Negative & Security Suite", "sublabel": "Fuzzer, Boundaries, Decisions", "pos": [270, 180], "size": [180, 58], "tag": "100% Equity, XSS", "sources": [{ "path": "tests/negative/01-08-negative-onboarding.spec.ts", "line": 1 }] },
+    { "id": "suite_regression", "type": "frontend", "label": "Regression E2E Suite", "sublabel": "Multi-Role Status Transitions", "pos": [270, 280], "size": [180, 58], "sources": [{ "path": "tests/regression/regression-e2e.spec.ts", "line": 1 }] },
+    { "id": "data_state", "type": "database", "label": "Run-Scoped State Engine", "sublabel": "state.json MRN Propagation", "pos": [270, 380], "size": [180, 58], "tag": "Dynamic State", "sources": [{ "path": "fixtures/state.json", "line": 1 }] },
+
+    { "id": "pom_wizard", "type": "frontend", "label": "Onboarding: 8 Steps", "sublabel": "Profile, UBOs, Banking, Docs", "pos": [520, 80], "size": [190, 58], "tag": "Sukesh (Onboard)", "sources": [{ "path": "pages/wizard/base-wizard.page.ts", "line": 1 }] },
+    { "id": "pom_compliance", "type": "frontend", "label": "Compliance Verification", "sublabel": "Approve, Return, Hold, Reject", "pos": [520, 180], "size": [190, 58], "tag": "bhanu (Compliance)", "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 1 }] },
+    { "id": "emcrey_engine", "type": "cloud", "label": "eMcREY AML Screening", "sublabel": "CLEAR / ON-HOLD / HIT", "pos": [520, 280], "size": [190, 58], "tag": "Background AML" },
+    { "id": "pom_approval", "type": "frontend", "label": "Approval Queue", "sublabel": "Final Approver Screen", "pos": [520, 380], "size": [190, 58], "tag": "uttamnadh (Approver)", "sources": [{ "path": "pages/approval-queue.page.ts", "line": 1 }] },
+
+    { "id": "final_approve", "type": "backend", "label": "1. Direct Approve", "sublabel": "Direct activation for CLEAR", "pos": [840, 80], "size": [190, 58], "tag": "Decision 1", "sources": [{ "path": "pages/approval-queue.page.ts", "line": 59 }] },
+    { "id": "final_onhold", "type": "security", "label": "2. Final On-Hold", "sublabel": "Moves to Compliance to Release", "pos": [840, 180], "size": [190, 58], "tag": "Decision 2", "sources": [{ "path": "pages/approval-queue.page.ts", "line": 86 }] },
+    { "id": "final_reject", "type": "security", "label": "3. Reject Decision", "sublabel": "Visible in All 3 Rejected Lists", "pos": [840, 280], "size": [190, 58], "tag": "Decision 3", "sources": [{ "path": "pages/approval-queue.page.ts", "line": 212 }] },
+    { "id": "active_live", "type": "cloud", "label": "Active Merchant Directory", "sublabel": "Searchable in Approved Register", "pos": [840, 380], "size": [190, 58], "tag": "Status: Active", "sources": [{ "path": "pages/approval-queue.page.ts", "line": 160 }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Orchestration & Triggers", "wraps": ["jenkins", "vpn_guard", "launchpad", "runner"] },
+    { "kind": "security-group", "label": "Playwright Test Suites & Data", "wraps": ["suite_positive", "suite_negative", "suite_regression", "data_state"] },
+    { "kind": "region", "label": "Role Queues & eMcREY Screening", "wraps": ["pom_wizard", "pom_compliance", "emcrey_engine", "pom_approval"] },
+    { "kind": "security-group", "label": "Final Approver 3 Decisions & Registry", "wraps": ["final_approve", "final_onhold", "final_reject", "active_live"] }
+  ],
+  "connections": [
+    { "id": "ci-to-vpn", "from": "jenkins", "to": "vpn_guard" },
+    { "id": "vpn-to-runner", "from": "vpn_guard", "to": "runner", "variant": "security" },
+    { "id": "launchpad-to-runner", "from": "launchpad", "to": "runner" },
+    { "id": "runner-to-suites", "from": "runner", "to": "suite_positive", "label": "Executes" },
+    { "id": "runner-to-neg", "from": "runner", "to": "suite_negative", "variant": "emphasis" },
+    { "id": "runner-to-reg", "from": "runner", "to": "suite_regression" },
+
+    { "id": "pos-to-wizard", "from": "suite_positive", "to": "pom_wizard", "variant": "emphasis" },
+    { "id": "wizard-to-state", "from": "pom_wizard", "to": "data_state", "label": "MRN", "variant": "emphasis" },
+    { "id": "wizard-to-comp", "from": "pom_wizard", "to": "pom_compliance", "label": "Submitted", "variant": "emphasis" },
+
+    { "id": "comp-to-emcrey", "from": "pom_compliance", "to": "emcrey_engine", "label": "Approve", "variant": "emphasis" },
+    { "id": "comp-to-reject", "from": "pom_compliance", "to": "final_reject", "label": "Reject", "variant": "security" },
+
+    { "id": "emcrey-to-appr", "from": "emcrey_engine", "to": "pom_approval", "label": "CLEAR", "variant": "emphasis" },
+
+    { "id": "appr-to-d1", "from": "pom_approval", "to": "final_approve", "label": "Direct Approve", "variant": "emphasis" },
+    { "id": "d1-to-active", "from": "final_approve", "to": "active_live", "label": "Live", "variant": "emphasis" },
+
+    { "id": "appr-to-d2", "from": "pom_approval", "to": "final_onhold", "label": "On-Hold", "variant": "dashed" },
+    { "id": "d2-loops-to-comp", "from": "final_onhold", "to": "pom_compliance", "label": "Release Loop", "variant": "dashed", "fromSide": "left", "toSide": "right" },
+
+    { "id": "appr-to-d3", "from": "pom_approval", "to": "final_reject", "label": "Reject", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Final Approver Decision 1: Direct Approve", "items": ["Applicable when eMcREY screening result is CLEAR", "Approver inputs mandatory decision notes", "Immediately transitions merchant to Active in directory"] },
+    { "dot": "amber", "title": "Final Approver Decision 2: Final On-Hold", "items": ["Triggered if approver identifies concerns or asks clarification", "Record moves BACK to Compliance Verification Queue", "Compliance officer inspects and must Release On-Hold", "Once released, record returns to Final Approver to approve and activate"] },
+    { "dot": "rose", "title": "Final Approver Decision 3: Reject", "items": ["Rejection requires mandatory rationale", "Record enters the Universal Rejected List", "Immediately visible in Rejected lists of Onboarding, Compliance, and Approver"] }
+  ]
+}

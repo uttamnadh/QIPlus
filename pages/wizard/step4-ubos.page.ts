@@ -46,23 +46,14 @@ export class Step4UBOsPage extends BaseWizardPage {
       await nameInput.fill(data.fullLegalName).catch(() => {});
     }
 
-    // 2. Place of birth & Occupation (batch fill)
-    await this.fastFillReact({
-      [`input[name="ubos.${index}.placeOfBirth"]`]: data.placeOfBirth,
-      [`input[name="ubos.${index}.occupation"]`]: data.occupation,
-    });
-
+    // 2. Place of birth & Occupation (direct fill)
     const pobInput = this.page.getByLabel('Place of birth *').nth(index);
-    if (await pobInput.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await pobInput.inputValue().catch(() => '')) !== data.placeOfBirth) {
-        await pobInput.fill(data.placeOfBirth).catch(() => {});
-      }
+    if (await pobInput.isVisible({ timeout: 500 }).catch(() => false)) {
+      await pobInput.fill(data.placeOfBirth).catch(() => {});
     }
     const occInput = this.page.getByLabel('Occupation *').nth(index);
-    if (await occInput.isVisible({ timeout: 150 }).catch(() => false)) {
-      if ((await occInput.inputValue().catch(() => '')) !== data.occupation) {
-        await occInput.fill(data.occupation).catch(() => {});
-      }
+    if (await occInput.isVisible({ timeout: 500 }).catch(() => false)) {
+      await occInput.fill(data.occupation).catch(() => {});
     }
 
     // 3. Emirates ID number
@@ -96,22 +87,25 @@ export class Step4UBOsPage extends BaseWizardPage {
     await this.fillUBODateOfBirth(index, data.dateOfBirth.day, data.dateOfBirth.month, data.dateOfBirth.year);
     await this.fillUBOIdExpiry(index, data.idExpiryDate.day, data.idExpiryDate.month, data.idExpiryDate.year);
 
-    // 8. Dropdowns (Nationality, Residence, Basis of control)
+    // 8. Dropdowns (Nationality, Residence, Basis of control - skip if default already matches)
     try {
       const natInput = this.page.locator('input[name*="nationality"], input[id*="nationality"]').nth(index).or(
         this.page.locator('label:has-text("Nationality")').nth(index).locator('..').locator('input')
       ).first();
-      if (await natInput.isVisible({ timeout: 800 }).catch(() => false)) {
-        await natInput.focus();
-        await natInput.fill(data.nationality || 'United Arab Emirates');
-        const opt = this.page.locator(`li[role="option"]:has-text("${data.nationality || 'United Arab Emirates'}"), [role="option"]:has-text("${data.nationality || 'United Arab Emirates'}")`).first();
-        if (await opt.isVisible({ timeout: 1500 }).catch(() => false)) {
-          await opt.click({ force: true });
-        } else {
-          await this.page.keyboard.press('ArrowDown');
-          await this.page.keyboard.press('Enter');
+      const curNat = (await natInput.inputValue().catch(() => '')).trim();
+      const targetNat = data.nationality || 'United Arab Emirates';
+      if (!curNat || !curNat.toLowerCase().includes(targetNat.toLowerCase())) {
+        if (await natInput.isVisible({ timeout: 300 }).catch(() => false)) {
+          await natInput.focus();
+          await natInput.fill(targetNat);
+          const opt = this.page.locator(`li[role="option"]:has-text("${targetNat}"), [role="option"]:has-text("${targetNat}")`).first();
+          if (await opt.isVisible({ timeout: 500 }).catch(() => false)) {
+            await opt.click({ force: true });
+          } else {
+            await this.page.keyboard.press('ArrowDown');
+            await this.page.keyboard.press('Enter');
+          }
         }
-        await this.page.locator('[role="listbox"]').waitFor({ state: 'hidden', timeout: 300 }).catch(() => {});
       }
     } catch {}
 
@@ -119,29 +113,34 @@ export class Step4UBOsPage extends BaseWizardPage {
       const resInput = this.page.locator('input[name*="countryOfResidence"], input[id*="countryOfResidence"]').nth(index).or(
         this.page.locator('label:has-text("Country of residence")').nth(index).locator('..').locator('input')
       ).first();
-      if (await resInput.isVisible({ timeout: 800 }).catch(() => false)) {
-        await resInput.focus();
-        await resInput.fill(data.countryOfResidence || 'United Arab Emirates');
-        const opt = this.page.locator(`li[role="option"]:has-text("${data.countryOfResidence || 'United Arab Emirates'}"), [role="option"]:has-text("${data.countryOfResidence || 'United Arab Emirates'}")`).first();
-        if (await opt.isVisible({ timeout: 1500 }).catch(() => false)) {
-          await opt.click({ force: true });
-        } else {
-          await this.page.keyboard.press('ArrowDown');
-          await this.page.keyboard.press('Enter');
+      const curRes = (await resInput.inputValue().catch(() => '')).trim();
+      const targetRes = data.countryOfResidence || 'United Arab Emirates';
+      if (!curRes || !curRes.toLowerCase().includes(targetRes.toLowerCase())) {
+        if (await resInput.isVisible({ timeout: 300 }).catch(() => false)) {
+          await resInput.focus();
+          await resInput.fill(targetRes);
+          const opt = this.page.locator(`li[role="option"]:has-text("${targetRes}"), [role="option"]:has-text("${targetRes}")`).first();
+          if (await opt.isVisible({ timeout: 500 }).catch(() => false)) {
+            await opt.click({ force: true });
+          } else {
+            await this.page.keyboard.press('ArrowDown');
+            await this.page.keyboard.press('Enter');
+          }
         }
-        await this.page.locator('[role="listbox"]').waitFor({ state: 'hidden', timeout: 300 }).catch(() => {});
       }
     } catch {}
 
     try {
       const basisBox = this.page.locator('label:has-text("Basis of control")').nth(index).locator('..').locator('[role="combobox"]').first();
-      if (await basisBox.isVisible({ timeout: 800 }).catch(() => false)) {
-        await basisBox.click({ force: true });
-        const opt = this.page.locator(`li[role="option"]:has-text("${data.basisOfControl}"), [role="option"]:has-text("${data.basisOfControl}")`).first();
-        if (await opt.isVisible({ timeout: 1200 }).catch(() => false)) {
-          await opt.click({ force: true });
+      const curBasis = (await basisBox.innerText().catch(() => '')).trim();
+      if (!curBasis || !curBasis.toLowerCase().includes(data.basisOfControl.toLowerCase())) {
+        if (await basisBox.isVisible({ timeout: 400 }).catch(() => false)) {
+          await basisBox.click({ force: true });
+          const opt = this.page.locator(`li[role="option"]:has-text("${data.basisOfControl}"), [role="option"]:has-text("${data.basisOfControl}")`).first();
+          if (await opt.isVisible({ timeout: 600 }).catch(() => false)) {
+            await opt.click({ force: true });
+          }
         }
-        await this.page.locator('[role="listbox"]').waitFor({ state: 'hidden', timeout: 300 }).catch(() => {});
       }
     } catch {}
   }
@@ -243,48 +242,24 @@ export class Step4UBOsPage extends BaseWizardPage {
       }
       const dobContainer = this.page.locator('div:has-text("Date of birth")').locator('xpath=ancestor::div[contains(@class, "MuiFormControl-root") or @role="group"]').nth(index);
 
-      // Dismiss any open poppers first
-      await this.page.keyboard.press('Escape').catch(() => {});
-
-      // Direct text input fill if available
+      const formatted = `${dStr}/${mStr}/${yStr}`;
+      const digits = `${dStr}${mStr}${yStr}`;
       const input = dobContainer.locator('input').first();
-      if (await input.isVisible({ timeout: 500 }).catch(() => false)) {
-        await input.focus();
-        await input.fill(`${dStr}/${mStr}/${yStr}`).catch(() => {});
-        await this.page.keyboard.press('Escape').catch(() => {});
+      if (await input.isVisible({ timeout: 200 }).catch(() => false)) {
+        await input.focus().catch(() => {});
+        await input.fill(formatted).catch(() => {});
+        const curVal = await input.inputValue().catch(() => '');
+        if (curVal.replace(/\D/g, '') === digits) {
+          return;
+        }
       }
 
-      // Fill spinbuttons sequentially
       const daySpinner = dobContainer.locator('[role="spinbutton"][aria-label="Day"], [role="spinbutton"]').first();
-      if (await daySpinner.isVisible({ timeout: 500 }).catch(() => false)) {
+      if (await daySpinner.isVisible({ timeout: 200 }).catch(() => false)) {
         await daySpinner.click({ force: true }).catch(() => {});
-        await this.page.keyboard.press('Escape').catch(() => {});
-        await this.page.keyboard.type(`${dStr}${mStr}${yStr}`, { delay: 30 }).catch(() => {});
+        await this.page.keyboard.type(digits, { delay: 0 }).catch(() => {});
+        return;
       }
-
-      // Check if month/year spinners need individual fill
-      const monthSpinner = dobContainer.locator('[role="spinbutton"][aria-label="Month"]').first();
-      if (await monthSpinner.isVisible({ timeout: 300 }).catch(() => false)) {
-        const monthText = await monthSpinner.innerText().catch(() => '');
-        if (monthText.includes('MM') || !monthText) {
-          await monthSpinner.click({ force: true }).catch(() => {});
-          await this.page.keyboard.press('Escape').catch(() => {});
-          if (mStr) await this.page.keyboard.type(mStr, { delay: 30 }).catch(() => {});
-        }
-      }
-
-      const yearSpinner = dobContainer.locator('[role="spinbutton"][aria-label="Year"]').first();
-      if (await yearSpinner.isVisible({ timeout: 300 }).catch(() => false)) {
-        const yearText = await yearSpinner.innerText().catch(() => '');
-        if (yearText.includes('YYYY') || !yearText) {
-          await yearSpinner.click({ force: true }).catch(() => {});
-          await this.page.keyboard.press('Escape').catch(() => {});
-          if (yStr) await this.page.keyboard.type(yStr, { delay: 30 }).catch(() => {});
-        }
-      }
-
-      await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.locator('body').click({ position: { x: 5, y: 5 }, force: true }).catch(() => {});
     } catch {}
   }
 
@@ -311,47 +286,24 @@ export class Step4UBOsPage extends BaseWizardPage {
       }
       const expiryContainer = this.page.locator('div:has-text("ID expiry date")').locator('xpath=ancestor::div[contains(@class, "MuiFormControl-root") or @role="group"]').nth(index);
 
-      // Dismiss any open poppers first
-      await this.page.keyboard.press('Escape').catch(() => {});
-
-      // Direct text input fill if available
+      const formatted = `${dStr}/${mStr}/${yStr}`;
+      const digits = `${dStr}${mStr}${yStr}`;
       const input = expiryContainer.locator('input').first();
-      if (await input.isVisible({ timeout: 500 }).catch(() => false)) {
-        await input.focus();
-        await input.fill(`${dStr}/${mStr}/${yStr}`).catch(() => {});
-        await this.page.keyboard.press('Escape').catch(() => {});
+      if (await input.isVisible({ timeout: 200 }).catch(() => false)) {
+        await input.focus().catch(() => {});
+        await input.fill(formatted).catch(() => {});
+        const curVal = await input.inputValue().catch(() => '');
+        if (curVal.replace(/\D/g, '') === digits) {
+          return;
+        }
       }
 
-      // Fill spinbuttons sequentially
       const daySpinner = expiryContainer.locator('[role="spinbutton"][aria-label="Day"], [role="spinbutton"]').first();
-      if (await daySpinner.isVisible({ timeout: 500 }).catch(() => false)) {
+      if (await daySpinner.isVisible({ timeout: 200 }).catch(() => false)) {
         await daySpinner.click({ force: true }).catch(() => {});
-        await this.page.keyboard.press('Escape').catch(() => {});
-        await this.page.keyboard.type(`${dStr}${mStr}${yStr}`, { delay: 30 }).catch(() => {});
+        await this.page.keyboard.type(digits, { delay: 0 }).catch(() => {});
+        return;
       }
-
-      const monthSpinner = expiryContainer.locator('[role="spinbutton"][aria-label="Month"]').first();
-      if (await monthSpinner.isVisible({ timeout: 300 }).catch(() => false)) {
-        const monthText = await monthSpinner.innerText().catch(() => '');
-        if (monthText.includes('MM') || !monthText) {
-          await monthSpinner.click({ force: true }).catch(() => {});
-          await this.page.keyboard.press('Escape').catch(() => {});
-          if (mStr) await this.page.keyboard.type(mStr, { delay: 30 }).catch(() => {});
-        }
-      }
-
-      const yearSpinner = expiryContainer.locator('[role="spinbutton"][aria-label="Year"]').first();
-      if (await yearSpinner.isVisible({ timeout: 300 }).catch(() => false)) {
-        const yearText = await yearSpinner.innerText().catch(() => '');
-        if (yearText.includes('YYYY') || !yearText) {
-          await yearSpinner.click({ force: true }).catch(() => {});
-          await this.page.keyboard.press('Escape').catch(() => {});
-          if (yStr) await this.page.keyboard.type(yStr, { delay: 30 }).catch(() => {});
-        }
-      }
-
-      await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.locator('body').click({ position: { x: 5, y: 5 }, force: true }).catch(() => {});
     } catch {}
   }
 

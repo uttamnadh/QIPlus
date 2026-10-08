@@ -16,7 +16,7 @@ export class ComplianceQueuePage {
   async navigateToVerificationQueue() {
     const backBtn = this.page.locator('button:has-text("Back")').first();
     if (await backBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await backBtn.click();
+      await backBtn.click().catch(() => {});
     }
 
     const link = this.page.locator('button:has-text("Verification queue"), a:has-text("Verification queue"), nav :text("Verification queue")').first();
@@ -29,7 +29,9 @@ export class ComplianceQueuePage {
 
   /** Filter the queue strictly by target MRN. */
   async filterByMRN(mrn: string) {
-    const input = this.page.getByPlaceholder('Filter by MRN or name');
+    const input = this.page.getByPlaceholder('Filter by MRN or company name')
+      .or(this.page.getByPlaceholder('Filter by MRN or name'))
+      .or(this.page.locator('input[placeholder*="MRN" i], input[placeholder*="Filter" i]')).first();
     await input.click();
     await input.fill(mrn);
     await this.page.keyboard.press('Enter');
@@ -37,18 +39,38 @@ export class ComplianceQueuePage {
 
   /**
    * Open the exact merchant record by target MRN created in onboarding officer.
-   * STRICT REQUIREMENT: Does NOT fall back to recent MRN records if target is not found.
+   * Uses fast retry polling to guarantee deterministic opening even if backend indexing
+   * takes 1-3 seconds to propagate the freshly submitted record.
    */
-  async openMerchant(targetMRN: string) {
+  async openMerchant(targetMRN: string, maxAttempts: number = 6, delayMs: number = 1000) {
     expect(targetMRN).toBeTruthy();
-    await this.filterByMRN(targetMRN);
 
-    // Locate the row strictly matching the created target MRN
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`[Compliance] Checking Verification Queue for MRN ${targetMRN} (attempt ${attempt}/${maxAttempts})`);
+      await this.filterByMRN(targetMRN);
+
+      // Wait briefly for table skeleton loader if present
+      await this.page.locator('.MuiSkeleton-root').first().waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+
+      const matchingRow = this.page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
+      const isVisible = await matchingRow.isVisible({ timeout: 1500 }).catch(() => false);
+
+      if (isVisible) {
+        console.log(`[Compliance] ✅ Found MRN ${targetMRN} in Verification Queue on attempt ${attempt}. Opening record...`);
+        await matchingRow.click();
+        return;
+      }
+
+      if (attempt < maxAttempts) {
+        await this.page.waitForTimeout(delayMs);
+        await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+        await this.navigateToVerificationQueue().catch(() => {});
+      }
+    }
+
+    // Final assertion to produce a clear assertion failure if never found
     const matchingRow = this.page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-    await expect(matchingRow).toBeVisible({
-      timeout: 5000
-    });
-
+    await expect(matchingRow).toBeVisible({ timeout: 4000 });
     await matchingRow.click();
   }
 
@@ -67,13 +89,8 @@ export class ComplianceQueuePage {
   async approveMerchant(notes: string = 'Approved by compliance officer after verifying documents and details.') {
     // Fill Decision notes * mandatory field
     const notesInput = this.page.locator('textarea[placeholder*="rationale" i], textarea, input[name="notes"]').first();
-    await notesInput.waitFor({ state: 'visible', timeout: 10000 });
-    await notesInput.focus();
+    await notesInput.waitFor({ state: 'visible', timeout: 5000 });
     await notesInput.fill(notes);
-    await notesInput.press('Space');
-    await notesInput.press('Backspace');
-    await notesInput.blur();
-    await this.page.waitForTimeout(300);
 
     const approveBtn = this.page.locator('button:has-text("Approve & forward"), button:has-text("Approve")').first();
     await expect(approveBtn).toBeEnabled({ timeout: 5000 });
@@ -81,78 +98,47 @@ export class ComplianceQueuePage {
 
     // Handle confirmation dialog reliably
     const confirmBtn = this.page.locator('[role="dialog"] button:has-text("Confirm"), .MuiDialog-paper button:has-text("Confirm"), [role="dialog"] button:has-text("Approve")').first();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
       await confirmBtn.click();
-    }
-
-    // Verify the toast message confirming AML screening was triggered
-    const toast = this.page.locator('.MuiSnackbar-root, [role="alert"], .MuiAlert-message');
-    const toastVisible = await toast.first().isVisible({ timeout: 4000 }).catch(() => false);
-    if (toastVisible) {
-      const toastText = await toast.first().innerText().catch(() => '');
-      console.log(`[Compliance] Toast message: "${toastText}"`);
-      await expect(toast.first()).toContainText('Decision recorded', { timeout: 3000 }).catch(() => {
-        console.log(`[Compliance] Toast text did not match expected "Decision recorded" — received: "${toastText}"`);
-      });
-    }
-
-    // Ensure any modal backdrop is unmounted
-    const dialog = this.page.locator('.MuiDialog-root, [role="dialog"]').first();
-    if (await dialog.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await dialog.waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
     }
   }
 
   /**
    * Wait for a record to appear in the Approved section with retry polling logic.
-   * eMcREY AML SCREENING: "Approve & forward" triggers asynchronous screening by eMcREY.
-   * As per requirements, it takes time for eMcREY to process and return CLEAR/HIT.
-   * This method polls the Approved section >5 times (default 10 attempts, 5s delay between
-   * refreshes) until the record appears and transitions out of "Pending Screening"
-   * into its evaluated state (e.g. "Pending final approval" or "Under compliance review").
-   *
-   * @returns object with found boolean and row status text.
+   * Polling interval is optimized to 1s.
    */
-  async waitForRecordInApproved(targetMRN: string, maxAttempts: number = 10, delayMs: number = 5000): Promise<{ found: boolean; status: string }> {
+  async waitForRecordInApproved(targetMRN: string, maxAttempts: number = 8, delayMs: number = 1000): Promise<{ found: boolean; status: string }> {
     let lastFoundStatus: string | null = null;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`[Compliance] Checking Approved section for MRN ${targetMRN} (eMcREY screening) — attempt ${attempt}/${maxAttempts}`);
+      console.log(`[Compliance] Checking Approved section for MRN ${targetMRN} (attempt ${attempt}/${maxAttempts})`);
 
       await this.navigateToApproved().catch(() => {});
       await this.filterByMRN(targetMRN);
 
       const row = this.page.locator(`tr:has-text("${targetMRN}"), [role="row"]:has-text("${targetMRN}")`).first();
-      const isVisible = await row.isVisible({ timeout: 2000 }).catch(() => false);
+      const isVisible = await row.isVisible({ timeout: 1500 }).catch(() => false);
 
       if (isVisible) {
         const rowText = await row.innerText().catch(() => '');
         lastFoundStatus = rowText;
-        console.log(`[Compliance] Found MRN ${targetMRN} in Approved section on attempt ${attempt}. Current row: ${rowText.replace(/\n+/g, ' | ')}`);
+        console.log(`[Compliance] Found MRN ${targetMRN} in Approved section: ${rowText.replace(/\n+/g, ' | ')}`);
         
-        // Wait until screening finishes (transitions OUT of "Pending Screening" into "Under compliance review" or "Pending final approval")
         if (!/Pending\s+Screening/i.test(rowText)) {
-          console.log(`[Compliance] ✅ MRN ${targetMRN} screening completed! Status transitioned out of "Pending Screening" to: ${rowText.replace(/\n+/g, ' | ')}`);
           return { found: true, status: rowText };
         }
-        console.log(`[Compliance] Record is still "Pending Screening" (eMcREY screening running). Refreshing to observe transition (Attempt ${attempt}/${maxAttempts})...`);
-      } else {
-        console.log(`[Compliance] Record not yet in Approved section. Waiting ${delayMs / 1000}s before refresh (Attempt ${attempt}/${maxAttempts})...`);
       }
 
       if (attempt < maxAttempts) {
         await this.page.waitForTimeout(delayMs);
         await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
-        await this.page.waitForTimeout(1000);
       }
     }
 
     if (lastFoundStatus) {
-      console.log(`[Compliance] ℹ️ MRN ${targetMRN} is present in Approved section (status: ${lastFoundStatus.replace(/\n+/g, ' | ')}).`);
       return { found: true, status: lastFoundStatus };
     }
 
-    console.log(`[Compliance] ⚠️ MRN ${targetMRN} was not found in Approved section after ${maxAttempts} refresh attempts.`);
     return { found: false, status: '' };
   }
 

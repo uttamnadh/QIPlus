@@ -4,10 +4,25 @@ import * as path from 'path';
 export interface RunOptions {
   shareholderType: string;
   recordCount: number;
+  maxStep?: number;
 }
 
 const CONFIG_FILE = path.join(__dirname, '.run-config.json');
 let cachedOptions: RunOptions | null = null;
+
+process.on('SIGINT', () => {
+  console.log('\n============================================================');
+  console.log('🚨 [FORCE CLOSED] Test execution was FORCE CLOSED by user (Ctrl+C)!');
+  console.log('============================================================\n');
+  process.exit(130);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n============================================================');
+  console.log('🚨 [FORCE CLOSED] Test execution was FORCE CLOSED (Terminated)!');
+  console.log('============================================================\n');
+  process.exit(143);
+});
 
 function readRecentConfig(): RunOptions | null {
   try {
@@ -16,7 +31,8 @@ function readRecentConfig(): RunOptions | null {
       if (Date.now() - (data.timestamp || 0) < 60000) { // Valid for 60 seconds
         return {
           shareholderType: data.shareholderType,
-          recordCount: data.recordCount
+          recordCount: data.recordCount,
+          maxStep: data.maxStep || 8
         };
       }
     }
@@ -34,6 +50,7 @@ function applyOptions(opts: RunOptions): RunOptions {
   cachedOptions = opts;
   process.env.SHAREHOLDER_TYPE = opts.shareholderType;
   process.env.RECORD_COUNT = String(opts.recordCount);
+  process.env.MAX_STEP = String(opts.maxStep || 8);
   writeConfig(opts);
   return opts;
 }
@@ -41,11 +58,12 @@ function applyOptions(opts: RunOptions): RunOptions {
 export function getOrPromptRunOptions(): RunOptions {
   if (cachedOptions) return cachedOptions;
 
-  // 1. If passed via environment variables, use them directly without prompt
-  if (process.env.SHAREHOLDER_TYPE && process.env.RECORD_COUNT) {
+  // 1. If passed via environment variables (RECORD_COUNT explicitly given), use it directly
+  if (process.env.RECORD_COUNT) {
     return applyOptions({
-      shareholderType: process.env.SHAREHOLDER_TYPE,
-      recordCount: parseInt(process.env.RECORD_COUNT, 10) || 1
+      shareholderType: process.env.SHAREHOLDER_TYPE || 'Individual',
+      recordCount: parseInt(process.env.RECORD_COUNT, 10) || 1,
+      maxStep: parseInt(process.env.MAX_STEP || '8', 10) || 8
     });
   }
 
@@ -58,54 +76,46 @@ export function getOrPromptRunOptions(): RunOptions {
     }
   }
 
-  // 3. If non-interactive (CI or no TTY)
-  if (process.env.CI || !process.stdout.isTTY) {
+  // 3. If non-interactive (CI or list mode)
+  if (process.env.CI || process.argv.includes('--list')) {
     return applyOptions({
       shareholderType: process.env.SHAREHOLDER_TYPE || 'Individual',
-      recordCount: parseInt(process.env.RECORD_COUNT || '1', 10) || 1
+      recordCount: parseInt(process.env.RECORD_COUNT || '1', 10) || 1,
+      maxStep: parseInt(process.env.MAX_STEP || '8', 10) || 8
     });
   }
 
-  // 4. Interactive prompt via console
+  // 4. Interactive prompt via console for record count only
   try {
     const conPath = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
     const fd = fs.openSync(conPath, 'rs');
 
     process.stdout.write('\n============================================================\n');
-    process.stdout.write('   🚀 QiPlus Onboarding Wizard Interactive Options\n');
+    process.stdout.write('   🚀 QiPlus Onboarding Wizard\n');
     process.stdout.write('============================================================\n\n');
-    process.stdout.write('1. Select Shareholder Type:\n');
-    process.stdout.write('   [1] Individual (Emirates ID / Auto UBO) [Default]\n');
-    process.stdout.write('   [2] Entity     (Trade License / Manual UBO)\n');
-    process.stdout.write('   [3] Alternate  (Mix between Individual & Entity)\n\n');
-    process.stdout.write('Enter choice [1, 2, or 3] (Default: 1): ');
+    process.stdout.write('Enter number of records to create (e.g. 1, 2, 3, 5, 10) [Default: 1]: ');
 
     const buf = Buffer.alloc(256);
-    let bytesRead = fs.readSync(fd, buf, 0, 256, null);
-    const choice = buf.toString('utf-8', 0, bytesRead).trim().toLowerCase();
-
-    let shareholderType = 'Individual';
-    if (choice === '2' || choice === 'entity' || choice === 'e') {
-      shareholderType = 'Entity';
-    } else if (choice === '3' || choice === 'alternate' || choice === 'alt' || choice === 'a' || choice === 'mix') {
-      shareholderType = 'Alternate';
-    }
-
-    process.stdout.write('\n2. Enter number of records to create (e.g. 1, 2, 3, 5, 10) [Default: 1]: ');
-    bytesRead = fs.readSync(fd, buf, 0, 256, null);
+    const bytesRead = fs.readSync(fd, buf, 0, 256, null);
     const countStr = buf.toString('utf-8', 0, bytesRead).trim();
     let recordCount = parseInt(countStr, 10) || 1;
     if (recordCount < 1) recordCount = 1;
 
     fs.closeSync(fd);
 
-    process.stdout.write(`\n▶ Configuration: Mode = ${shareholderType} | Total Records = ${recordCount}\n\n`);
+    const shareholderType = process.env.SHAREHOLDER_TYPE || 'Individual';
+    process.stdout.write(`\n▶ Configuration: Shareholder = ${shareholderType} | Total Records = ${recordCount}\n\n`);
 
-    return applyOptions({ shareholderType, recordCount });
+    return applyOptions({
+      shareholderType,
+      recordCount,
+      maxStep: parseInt(process.env.MAX_STEP || '8', 10) || 8
+    });
   } catch {
     return applyOptions({
       shareholderType: process.env.SHAREHOLDER_TYPE || 'Individual',
-      recordCount: parseInt(process.env.RECORD_COUNT || '1', 10) || 1
+      recordCount: parseInt(process.env.RECORD_COUNT || '1', 10) || 1,
+      maxStep: parseInt(process.env.MAX_STEP || '8', 10) || 8
     });
   }
 }

@@ -23,13 +23,12 @@ export class Step8ReviewPage extends BaseWizardPage {
   /** Click 'Submit for review' button and confirm dialog if shown (zero dead waits). */
   async submitForReview() {
     const btn = this.page.locator('button:has-text("Submit for review")');
-    await btn.click();
+    await btn.click({ force: true });
 
     // Confirm modal dialog "Submit for compliance review?"
     const submitModalBtn = this.page.locator('[role="dialog"] button:has-text("Submit"), .MuiDialog-paper button:has-text("Submit")').first();
-    if (await submitModalBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await submitModalBtn.click();
-      await this.page.locator('[role="dialog"], .MuiDialog-root').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    if (await submitModalBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await submitModalBtn.click({ force: true });
     }
 
     // Wait for redirect to dashboard or submitted list

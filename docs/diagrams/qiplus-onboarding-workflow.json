@@ -1,0 +1,109 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "QiPlus Multi-Role Onboarding & Approval Workflow",
+    "subtitle": "Sequential Flow: Onboarding Wizard, 4 Compliance Decisions, eMcREY Screening, 3 Approver Decisions",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Bhanukiran05/qiplus-e2e.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "8965434b2d49513238617756d8eccbe3f3280d31"
+    },
+    "output": "qiplus-onboarding-workflow.html"
+  },
+  "lanes": [
+    { "id": "lane_onboarding", "label": "Onboarding Officer (Sukesh)" },
+    { "id": "lane_compliance", "label": "Compliance Officer (bhanu)" },
+    { "id": "lane_emcrey", "label": "eMcREY Screening Engine" },
+    { "id": "lane_approver", "label": "Final Approver (uttamnadh)" },
+    { "id": "lane_registry", "label": "Universal Registers & Registry", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "intake_phase", "label": "1. Intake & MRN", "fromCol": 0, "toCol": 1 },
+    { "id": "compliance_phase", "label": "2. Compliance", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
+    { "id": "screening_phase", "label": "3. eMcREY", "fromCol": 3, "toCol": 3, "variant": "dashed" },
+    { "id": "approval_phase", "label": "4. Approval & Activation", "fromCol": 4, "toCol": 5, "variant": "emphasis" }
+  ],
+  "mainPath": [
+    "onboard_draft",
+    "onboard_submit",
+    "comp_queue",
+    "emcrey_screen",
+    "appr_queue",
+    "appr_activate",
+    "active_merchants"
+  ],
+  "nodes": [
+    { "id": "onboard_draft", "lane": "lane_onboarding", "col": 0, "type": "frontend", "label": "Fill Steps 1–7", "sublabel": "Profile, Docs, Bank", "tag": "Data Intake", "width": 132, "sources": [{ "path": "pages/wizard/step1-profile.page.ts", "line": 1 }, { "path": "tests/positive/02-onboarding-wizard.spec.ts", "line": 44 }] },
+    { "id": "onboard_submit", "lane": "lane_onboarding", "col": 1, "type": "backend", "label": "Step 8 Submit", "sublabel": "Generates MRN", "tag": "Submitted", "width": 132, "sources": [{ "path": "pages/wizard/step8-review.page.ts", "line": 1 }, { "path": "tests/positive/02-onboarding-wizard.spec.ts", "line": 95 }] },
+    { "id": "onboard_returned", "lane": "lane_onboarding", "col": 2, "type": "frontend", "label": "Clarification List", "sublabel": "Resume Editing", "tag": "NOT Drafts", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 168 }, { "path": "tests/negative/09-compliance-review.spec.ts", "line": 95 }] },
+
+    { "id": "comp_hold", "lane": "lane_compliance", "col": 1, "type": "security", "label": "Compliance Hold", "sublabel": "Release from Hold", "tag": "Decision 3", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 180 }, { "path": "tests/negative/09-compliance-review.spec.ts", "line": 138 }] },
+    { "id": "comp_queue", "lane": "lane_compliance", "col": 2, "type": "frontend", "label": "Verify Queue", "sublabel": "Review KYC & Docs", "tag": "4 Decisions", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 25 }, { "path": "tests/negative/09-compliance-review.spec.ts", "line": 85 }] },
+    { "id": "comp_release_hold", "lane": "lane_compliance", "col": 5, "type": "security", "label": "Release On-Hold", "sublabel": "Compliance Action", "tag": "For Approver", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 197 }, { "path": "tests/negative/09-compliance-review.spec.ts", "line": 150 }] },
+
+    { "id": "emcrey_screen", "lane": "lane_emcrey", "col": 3, "type": "cloud", "label": "AML Screening", "sublabel": "CLEAR / HOLD / HIT", "tag": "eMcREY Engine", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 67 }, { "path": "pages/approval-queue.page.ts", "line": 121 }] },
+    { "id": "emcrey_locked", "lane": "lane_emcrey", "col": 4, "type": "security", "label": "Decision Locked", "sublabel": "Buttons Disabled", "tag": "HIT / ON-HOLD", "width": 132, "sources": [{ "path": "pages/approval-queue.page.ts", "line": 62 }, { "path": "tests/positive/04-final-approval.spec.ts", "line": 86 }] },
+
+    { "id": "appr_queue", "lane": "lane_approver", "col": 4, "type": "frontend", "label": "Approval Queue", "sublabel": "Decision Unlocked", "tag": "3 Decisions", "width": 132, "sources": [{ "path": "pages/approval-queue.page.ts", "line": 25 }, { "path": "tests/positive/04-final-approval.spec.ts", "line": 70 }] },
+    { "id": "appr_activate", "lane": "lane_approver", "col": 5, "type": "backend", "label": "Direct Approve", "sublabel": "Mandatory Notes", "tag": "Decision 1", "width": 132, "sources": [{ "path": "pages/approval-queue.page.ts", "line": 59 }, { "path": "tests/positive/04-final-approval.spec.ts", "line": 99 }] },
+
+    { "id": "universal_rejected", "lane": "lane_registry", "col": 3, "type": "security", "label": "Universal Reject", "sublabel": "Visible All Roles", "tag": "All 3 Roles", "width": 132, "sources": [{ "path": "pages/compliance-queue.page.ts", "line": 153 }, { "path": "pages/approval-queue.page.ts", "line": 221 }] },
+    { "id": "active_merchants", "lane": "lane_registry", "col": 5, "type": "cloud", "label": "Active Merchant", "sublabel": "Searchable Register", "tag": "Status: Active", "width": 132, "sources": [{ "path": "pages/approval-queue.page.ts", "line": 160 }, { "path": "tests/positive/04-final-approval.spec.ts", "line": 128 }] }
+  ],
+  "edges": [
+    { "id": "e_draft_submit", "from": "onboard_draft", "to": "onboard_submit", "label": "Complete Steps 1–8", "variant": "default" },
+    { "id": "e_submit_comp", "from": "onboard_submit", "to": "comp_queue", "label": "Submit", "variant": "emphasis", "fromSide": "right", "toSide": "top" },
+
+    { "id": "e_comp_return", "from": "comp_queue", "to": "onboard_returned", "label": "1. Return Clarification", "variant": "dashed", "role": "branch" },
+    { "id": "e_return_resume", "from": "onboard_returned", "to": "onboard_submit", "label": "Resume & Resubmit", "variant": "dashed", "role": "return" },
+    { "id": "e_comp_reject", "from": "comp_queue", "to": "universal_rejected", "label": "2. Reject", "variant": "security", "role": "error" },
+    { "id": "e_comp_hold", "from": "comp_queue", "to": "comp_hold", "label": "3. Compliance Hold", "variant": "dashed", "role": "branch", "fromSide": "left", "toSide": "right" },
+    { "id": "e_hold_release", "from": "comp_hold", "to": "comp_queue", "label": "Release from hold", "variant": "dashed", "role": "return", "fromSide": "bottom", "toSide": "bottom" },
+    { "id": "e_comp_approve", "from": "comp_queue", "to": "emcrey_screen", "label": "4. Approve & Forward", "variant": "emphasis" },
+
+    { "id": "e_screen_clear", "from": "emcrey_screen", "to": "appr_queue", "label": "Status: CLEAR", "variant": "emphasis" },
+    { "id": "e_screen_lock", "from": "emcrey_screen", "to": "emcrey_locked", "label": "HIT / ON-HOLD", "variant": "security", "role": "error" },
+
+    { "id": "e_appr_approve", "from": "appr_queue", "to": "appr_activate", "label": "1. Direct Approve", "variant": "emphasis" },
+    { "id": "e_activate_live", "from": "appr_activate", "to": "active_merchants", "label": "Active Merchant", "variant": "emphasis" },
+    { "id": "e_appr_hold", "from": "appr_queue", "to": "comp_release_hold", "label": "2. Final On-Hold", "variant": "dashed", "role": "branch" },
+    { "id": "e_onhold_release", "from": "comp_release_hold", "to": "appr_activate", "label": "Release on hold", "variant": "emphasis" },
+    { "id": "e_appr_reject", "from": "appr_queue", "to": "universal_rejected", "label": "3. Reject", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Role 1: Onboarding Officer (Sukesh)",
+      "items": [
+        "Completes Steps 1 to 7 and reviews/submits in Step 8 to generate unique MRN (Status: Submitted)",
+        "If returned by Compliance, application routes to dedicated 'Returned for clarification' list (never Drafts)",
+        "Officer clicks 'Resume editing' to update flagged fields/documents and re-submits through Step 8"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Role 2: Compliance (bhanu) & eMcREY Screening",
+      "items": [
+        "Decision 1 (Return for Clarification): Routes back to Onboarding clarification queue with remarks",
+        "Decision 2 (Reject): Moves record immediately to the Universal Rejected List",
+        "Decision 3 (Compliance On-Hold): Stored in Compliance On-hold list until 'Release from hold' resumes verification",
+        "Decision 4 (Approve & Forward): Dispatches application to eMcREY AML screening (CLEAR, ON-HOLD, HIT)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Role 3: Final Approver (uttamnadh) & Universal Registers",
+      "items": [
+        "eMcREY HIT or ON-HOLD: Decision is LOCKED (notes and buttons disabled; Approver cannot decide)",
+        "Decision 1 (Direct Approve & Activate): Published to Active Merchant Directory & Approved Merchants",
+        "Decision 2 (Final On-Hold): Moves BACK to Compliance to inspect and click 'Release on hold'",
+        "Decision 3 (Reject): Moves to Universal Rejected List (accessible to Onboarding, Compliance, and Approver)"
+      ]
+    }
+  ]
+}

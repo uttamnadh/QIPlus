@@ -63,36 +63,11 @@ export class BaseWizardPage {
 
   // ── Navigation Buttons ────────────────────────────────────────
 
-  /** Click 'Save & continue' and proceed immediately to next condition-based wait. */
+  /** Click 'Save & continue' cleanly. */
   async clickSaveAndContinue() {
-    // Dismiss any dangling modal/popover backdrop
-    const backdrop = this.page.locator('.MuiModal-backdrop, .MuiBackdrop-root').first();
-    if (await backdrop.isVisible({ timeout: 200 }).catch(() => false)) {
-      await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.waitForTimeout(100);
-    }
-
-    const btn = this.page.locator('button:has-text("Save & continue")').first();
+    const btn = this.page.locator('button:has-text("Save & continue"), button:has-text("Save and continue")').first();
     await expect(btn).toBeEnabled({ timeout: 5000 });
-    await btn.click({ force: true });
-
-    // Check if step changes within 2.5s; if still on same step and button enabled, click again (resilience)
-    const initialStep = await this.getCurrentStepNumber().catch(() => 0);
-    try {
-      await this.page.waitForFunction(
-        (init) => {
-          const text = document.querySelector('body')?.innerText || '';
-          const match = text.match(/Step (\d+) of 8/);
-          return match ? parseInt(match[1], 10) !== init : true;
-        },
-        initialStep,
-        { timeout: 2500 }
-      );
-    } catch {
-      if (await btn.isVisible().catch(() => false) && await btn.isEnabled().catch(() => false)) {
-        await btn.click({ force: true }).catch(() => {});
-      }
-    }
+    await btn.click();
   }
 
   /** Try to save and check if step advances (for negative tests). */
@@ -130,52 +105,28 @@ export class BaseWizardPage {
 
   /**
    * Superfast sign out from top navbar with zero dead waits.
-   * Clicks Sign out and confirms redirect to /login immediately.
+   * Handles optional "Sign out?" confirmation dialog reliably (e.g. on review pages with unsaved draft state).
    */
   async signOut() {
-    const signOutBtn = this.page.locator('button:has-text("Sign out"), [aria-label*="Sign out" i]').first();
-    await signOutBtn.click({ force: true }).catch(() => {});
+    if (this.page.isClosed()) return;
+    if (this.page.url().includes('/login')) return;
 
-    // Quick modal confirmation fallback ONLY if dialog exists
-    const confirmBtn = this.page.locator('.MuiDialog-paper button:has-text("Sign out"), .MuiDialog-paper button:has-text("Confirm"), [role="dialog"] button').filter({ hasNotText: 'Cancel' }).last();
-    if (await confirmBtn.isVisible({ timeout: 300 }).catch(() => false)) {
-      await confirmBtn.click().catch(() => {});
+    const signOutBtn = this.page.locator('button:has-text("Sign out"), [aria-label*="Sign out" i]').first();
+    if (await signOutBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await signOutBtn.click({ force: true }).catch(() => {});
+
+      const confirmBtn = this.page.locator('[role="dialog"] button:has-text("Sign out"), .MuiDialog-paper button:has-text("Sign out"), [role="dialog"] button:has-text("Confirm")').first();
+      if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await confirmBtn.click({ force: true }).catch(() => {});
+      }
+
+      await this.page.waitForURL('**/login', { timeout: 4000 }).catch(() => null);
     }
 
-    await this.page.waitForURL('**/login', { timeout: 4000 }).catch(() => null);
-  }
-
-  /**
-   * Lightning-fast batch input filler for React applications.
-   * Directly invokes the native HTMLInputElement / HTMLTextAreaElement prototype setter
-   * and dispatches synthetic input, change, and blur events so React captures state immediately.
-   */
-  async fastFillReact(fields: Record<string, string | undefined>) {
-    await this.page.evaluate((fieldEntries) => {
-      const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      const nativeTextAreaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-
-      for (const [selectorOrName, val] of Object.entries(fieldEntries)) {
-        if (val === undefined || val === null || val === '') continue;
-        const selector = selectorOrName.includes('[') || selectorOrName.startsWith('.') || selectorOrName.startsWith('#')
-          ? selectorOrName
-          : `input[name="${selectorOrName}"], textarea[name="${selectorOrName}"]`;
-
-        const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
-        if (el && !el.readOnly && !el.disabled) {
-          el.focus();
-          const setter = el instanceof HTMLTextAreaElement ? nativeTextAreaSetter : nativeInputSetter;
-          if (setter) {
-            setter.call(el, val);
-          } else {
-            el.value = val;
-          }
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          el.dispatchEvent(new Event('blur', { bubbles: true }));
-        }
-      }
-    }, fields).catch(() => {});
+    // Fail-safe: ensure page redirects to login
+    if (!this.page.url().includes('/login')) {
+      await this.page.goto('/login', { waitUntil: 'domcontentloaded' }).catch(() => {});
+    }
   }
 
   // ── MUI DatePicker Helper ────────────────────────────────────
@@ -201,7 +152,7 @@ export class BaseWizardPage {
       labelPattern ? this.page.getByLabel(labelPattern).first() : this.page.locator('input[name*="Date"]').first()
     );
 
-    if (await input.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await input.isVisible({ timeout: 100 }).catch(() => false)) {
       await input.focus().catch(() => {});
       await input.fill(formatted).catch(() => {});
       const curVal = await input.inputValue().catch(() => '');
@@ -216,7 +167,7 @@ export class BaseWizardPage {
       : input.locator('xpath=ancestor::div[@role="group"]');
 
     const daySpinner = container.locator('[role="spinbutton"][aria-label="Day"], [role="spinbutton"]').first();
-    if (await daySpinner.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await daySpinner.isVisible({ timeout: 150 }).catch(() => false)) {
       await daySpinner.click({ force: true }).catch(() => {});
       await this.page.keyboard.press('Escape').catch(() => {});
       await this.page.keyboard.type(digits, { delay: 0 }).catch(() => {});
@@ -226,21 +177,30 @@ export class BaseWizardPage {
 
   /**
    * Helper for MUI Select (dropdown) components.
-   * Clicks select, waits for option, clicks option, and waits for listbox to dismiss.
+   * Clicks select, waits for option, clicks option.
    */
   async selectDropdown(nameAttr: string, optionText: string) {
-    const listbox = this.page.locator('ul[role="listbox"], [role="listbox"]').first();
-    if (await listbox.isVisible({ timeout: 100 }).catch(() => false)) {
-      await listbox.waitFor({ state: 'hidden', timeout: 500 }).catch(() => {});
+    const root = this.page
+      .locator(`[name="${nameAttr}"]`)
+      .locator('xpath=ancestor::div[contains(@class, "MuiInputBase-root") or contains(@class, "MuiFormControl-root")]')
+      .or(this.page.locator(`[name="${nameAttr}"]`).locator('..'))
+      .first();
+
+    const combobox = root.locator('[role="combobox"], .MuiSelect-select').first();
+    const curVal = (await combobox.innerText().catch(() => '')).trim();
+
+    // If current value already includes the desired option (default is already selected), skip completely!
+    if (curVal && (curVal.toLowerCase() === optionText.toLowerCase() || curVal.includes(optionText))) {
+      return;
     }
 
-    const select = this.page.locator(`[name="${nameAttr}"]`).locator('xpath=ancestor::div[contains(@class, "MuiInputBase-root")]').or(this.page.locator(`[name="${nameAttr}"]`)).first();
-    await select.click();
+    const clickTarget = (await combobox.isVisible().catch(() => false)) ? combobox : root;
+    await clickTarget.click();
 
     const option = this.page.locator(`li[role="option"]:has-text("${optionText}"), [role="option"]:has-text("${optionText}")`).first();
-    await option.waitFor({ state: 'visible', timeout: 2500 });
+    await option.waitFor({ state: 'visible', timeout: 2000 });
     await option.click();
-    await listbox.waitFor({ state: 'hidden', timeout: 800 }).catch(() => {});
+    await this.page.locator('ul[role="listbox"]').first().waitFor({ state: 'hidden', timeout: 400 }).catch(() => {});
   }
 
   // ── Toast Messages ───────────────────────────────────────────

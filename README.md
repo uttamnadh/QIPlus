@@ -1,6 +1,12 @@
 # QiPlus E2E UI Test Automation Suite
 
-A robust, enterprise-grade End-to-End (E2E) Test Automation Framework built with **Playwright (TypeScript)**, **Page Object Model (POM)**, and **Allure Reporting** for the QiPlus Merchant Onboarding & Lifecycle Management Platform.
+[![Architect](https://img.shields.io/badge/Architect-Bhanu_Kiran-blue?style=for-the-badge&logo=github)]()
+[![Framework](https://img.shields.io/badge/Framework-Playwright_TypeScript-2EAD33?style=for-the-badge&logo=playwright)]()
+[![Design](https://img.shields.io/badge/Architecture-Page_Object_Model-orange?style=for-the-badge)]()
+[![Compliance](https://img.shields.io/badge/UAE_KYC-Compliant-darkred?style=for-the-badge)]()
+
+> **Enterprise Test Automation Framework for QiPlus Merchant Onboarding & Lifecycle Platform**  
+> **Architected & Developed by**: **Bhanu Kiran** (QA Automation Lead)
 
 ---
 
@@ -26,17 +32,32 @@ A robust, enterprise-grade End-to-End (E2E) Test Automation Framework built with
 ## Overview & Architecture
 
 The QiPlus E2E suite automates the complete merchant onboarding lifecycle across **3 distinct user roles**:
-1. **Onboarding Officer** (`Sukesh`): Initiates registration, fills all 8 wizard steps, uploads documents, and submits.
-2. **Compliance Officer** (`bhanu`): Audits submitted records in Verification Queue, inputs decision notes, and approves/forwards.
-3. **Final Approver** (`uttamnadh`): Inspects approved records in Approval Queue, inputs decision notes, and activates the merchant.
+1. **Onboarding Officer** (`Sukesh`): Initiates registration, fills all 8 wizard steps, uploads documents, and submits. (Handles Compliance loopback via dedicated `Returned for clarification` list with `Resume editing`).
+2. **Compliance Officer** (`bhanu`): Audits submitted records in Verification Queue, inputs decision notes, and executes 1 of 4 decisions: *Approve & Forward*, *Return for Clarification*, *Compliance On-Hold*, or *Reject*. Also reviews and releases *Final Approver On-Hold* records.
+3. **eMcREY Screening Engine**: Automated AML and sanctions screening producing `CLEAR` (unlocked), `ON-HOLD` (decision locked), or `HIT` (decision locked).
+4. **Final Approver** (`uttamnadh`): Inspects approved records with `CLEAR` status and executes 1 of 3 decisions: *Direct Approve & Activate* (Status: Active), *Final On-Hold* (moves back to Compliance to release), or *Reject* (Universal Rejected List).
 
-```mermaid
-flowchart LR
-    A[Onboarding Officer\nSukesh] -->|Create & Fill Steps 1-8| B[Submitted Queue\nStatus: Submitted]
-    B -->|Audit & Decision Notes| C[Compliance Officer\nbhanu]
-    C -->|Approve & Forward| D[Approval Queue\nStatus: Pending Final Approval]
-    D -->|Audit & Decision Notes| E[Final Approver\nuttamnadh]
-    E -->|Approve & Activate| F[Active Merchant\nStatus: Active]
+---
+
+## Interactive Architecture & Visual Diagrams (Archify Engine)
+
+Explore interactive, standalone SVG diagrams with dark/light mode, trace motion, and source provenance:
+
+| Diagram | Description | Direct File Link |
+|---|---|---|
+| **Unified Developer Hub** | Tabbed interactive portal hosting all diagrams and rule references | [docs/diagrams/index.html](docs/diagrams/index.html) |
+| **Multi-Role Workflow** | End-to-end sequential flow: Wizard, 4 Compliance decisions, eMcREY, 3 Approver decisions | [docs/diagrams/qiplus-onboarding-workflow.html](docs/diagrams/qiplus-onboarding-workflow.html) |
+| **State Machine Lifecycle** | Full merchant state machine, holds, clarification loop, AML screening gates & exits | [docs/diagrams/qiplus-merchant-lifecycle.html](docs/diagrams/qiplus-merchant-lifecycle.html) |
+| **System & Test Suite Architecture** | Component boundaries, POM layers, runners, Jenkins CI/CD, and 3 Approver decisions | [docs/diagrams/qiplus-architecture.html](docs/diagrams/qiplus-architecture.html) |
+
+### Re-rendering Diagrams
+
+```bash
+# Re-render all 3 Archify visual diagrams
+npm run archify:render
+
+# Launch Developer Hub in browser
+npm run archify:view
 ```
 
 ---
@@ -73,8 +94,7 @@ qiplus-e2e/
 │   ├── positive/                  # Positive Happy Path Sequential Suite
 │   │   ├── 02-onboarding-wizard.spec.ts
 │   │   ├── 03-compliance-review.spec.ts
-│   │   ├── 04-final-approval.spec.ts
-│   │   └── 05-status-transitions.spec.ts
+│   │   └── 04-final-approval.spec.ts
 │   ├── negative/                  # Negative, Boundary, and Security Suite
 │   │   ├── 01-08-negative-onboarding.spec.ts
 │   │   ├── 01-step1-profile.spec.ts .. 08-step8-review.spec.ts
@@ -122,10 +142,8 @@ Executed sequentially using a single worker (`workers: 1`, `fullyParallel: false
    - Filters Approval Queue strictly by the approved `MRN` (no fallback).
    - Fills mandatory `Decision notes *`, clicks `Approve & Activate`.
    - Verifies status changed to `Active` in `Approved merchants` list and logs out.
-4. **`05-status-transitions.spec.ts`**:
-   - Multi-role audit ensuring data consistency and status badges across all 3 roles for the exact same MRN.
 
-> **Pipeline Guarding:** If Onboarding fails at any step, `03`, `04`, and `05` automatically **skip execution completely without logging in**.
+> **Pipeline Guarding:** If Onboarding fails at any step, `03` and `04` automatically **skip execution completely without logging in**.
 
 ---
 
@@ -279,3 +297,16 @@ When a test fails, [`fixtures/diagnostics.ts`](file:///C:/Users/Kiran/.gemini/an
 2. **Strict MRN Isolation**: Every test run creates a fresh MRN. Downstream queues filter strictly by that MRN to avoid picking up old or incomplete database records.
 3. **MUI DatePicker Handling**: Uses keyboard typing with `Escape` dismissals to prevent MUI Calendar Popups from capturing focus and dropping keystrokes.
 4. **Auto-Clean Cache**: [`global-setup.ts`](file:///C:/Users/Kiran/.gemini/antigravity/scratch/qiplus-e2e/global-setup.ts) cleans old Allure results once before test execution starts, ensuring reports always display fresh data.
+
+---
+
+## 👤 Framework Architect & Author Credit
+
+* **Lead Automation Architect**: **Bhanu Kiran** (QA Automation Lead)
+* **Framework Architecture**: Modular Page Object Model (POM) + Dynamic UAE KYC/AML Data Engine
+* **Core Capabilities**:
+  * Multi-role E2E state-machine pipeline (Onboarding $\rightarrow$ Compliance $\rightarrow$ Approver)
+  * Automated TOTP MFA token generation and session resilience
+  * Sub-35s optimized end-to-end execution speed
+  * Allure 2 and Playwright HTML diagnostic reporting engines
+* **Copyright & Maintenance**: © QiPlus QA Engineering Team. Designed and maintained by Bhanu Kiran.

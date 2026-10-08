@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QiPlus Merchant Onboarding - Architecture & Workflow Hub</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-border: #1f293d;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #030712;
+      background: var(--primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      padding: 7px 13px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .viewer-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #020617;
+    }
+
+    iframe {
+      width: 100%;
+      height: 78vh;
+      border: none;
+      background: transparent;
+    }
+
+    .rules-drawer {
+      background: var(--surface);
+      border-top: 1px solid var(--surface-border);
+      padding: 24px 32px;
+    }
+
+    .rules-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .rule-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rule-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .rule-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .tag-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .tag-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .tag-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .tag-rose { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+
+    .rule-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .rule-list li {
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .rule-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-size: 14px;
+      line-height: 1;
+      top: 1px;
+    }
+
+    footer {
+      background: #0b0f19;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 28px;
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.07);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">Q+</div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="brand-title">QiPlus Onboarding Architecture Hub</span>
+          <span class="brand-badge">Verified Showcase</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="loadDiagram('qiplus-onboarding-workflow.html', this)">
+        <span>⇄</span> Multi-Role Workflow
+      </button>
+      <button class="tab-btn" onclick="loadDiagram('qiplus-merchant-lifecycle.html', this)">
+        <span>⟳</span> State Machine Lifecycle
+      </button>
+      <button class="tab-btn" onclick="loadDiagram('qiplus-architecture.html', this)">
+        <span>◫</span> System Architecture
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <a id="open-standalone" class="action-btn" href="qiplus-onboarding-workflow.html" target="_blank">
+        <span>↗</span> Open Standalone
+      </a>
+    </div>
+  </header>
+
+  <div class="viewer-container">
+    <iframe id="diagram-frame" src="qiplus-onboarding-workflow.html" title="QiPlus Visual Architecture Diagram"></iframe>
+  </div>
+
+  <section class="rules-drawer">
+    <div class="rules-title">
+      <span>⚙</span> Verified Multi-Role Rules & Decision Paths
+    </div>
+
+    <div class="rules-grid">
+      <!-- Card 1: Onboarding Officer -->
+      <div class="rule-card">
+        <div class="rule-card-header">
+          <span class="rule-card-title">1. Onboarding Officer (Sukesh)</span>
+          <span class="rule-tag tag-blue">Data Intake</span>
+        </div>
+        <ul class="rule-list">
+          <li>Completes Steps 1 to 8: Profile, Business, Ownership, UBOs, Signatories, Banking, Documents, Review.</li>
+          <li>Submitting Step 8 generates a unique Merchant Reference Number (MRN).</li>
+          <li><strong>Clarification Loop:</strong> If returned by Compliance, appears in the dedicated <code>Returned for clarification</code> list (NOT Drafts).</li>
+          <li>Officer clicks <code>Resume editing</code>, modifies requested fields, and re-submits via Step 8.</li>
+        </ul>
+      </div>
+
+      <!-- Card 2: Compliance Officer -->
+      <div class="rule-card">
+        <div class="rule-card-header">
+          <span class="rule-card-title">2. Compliance Officer (bhanu)</span>
+          <span class="rule-tag tag-amber">4 Decisions</span>
+        </div>
+        <ul class="rule-list">
+          <li><strong>1. Return for Clarification:</strong> Moves to Onboarding Officer's clarification queue with remarks (never Drafts).</li>
+          <li><strong>2. Reject:</strong> Immediately moves record to Universal Rejected List (visible in all 3 roles).</li>
+          <li><strong>3. Compliance On-Hold:</strong> Pauses in Compliance On-Hold list; released via <code>Release from Hold</code> to resume verification.</li>
+          <li><strong>4. Approve & Forward:</strong> Dispatches to eMcREY AML Screening Engine and forwards to Final Approval Queue.</li>
+        </ul>
+      </div>
+
+      <!-- Card 3: eMcREY AML Engine -->
+      <div class="rule-card">
+        <div class="rule-card-header">
+          <span class="rule-card-title">3. eMcREY Screening Engine</span>
+          <span class="rule-tag tag-rose">3 Outcomes</span>
+        </div>
+        <ul class="rule-list">
+          <li><strong>CLEAR:</strong> AML check passed without hits; decision actions are unlocked for Final Approver.</li>
+          <li><strong>ON-HOLD:</strong> Screening held pending external analysis; approver decision buttons/notes are LOCKED.</li>
+          <li><strong>HIT:</strong> Sanctions/PEP match found; approver decision buttons/notes are LOCKED.</li>
+          <li>Approver cannot take any decision while screening status is ON-HOLD or HIT.</li>
+        </ul>
+      </div>
+
+      <!-- Card 4: Final Approver -->
+      <div class="rule-card">
+        <div class="rule-card-header">
+          <span class="rule-card-title">4. Final Approver (uttamnadh)</span>
+          <span class="rule-tag tag-green">3 Decisions</span>
+        </div>
+        <ul class="rule-list">
+          <li><strong>1. Direct Approve & Activate:</strong> Available for CLEAR screening; activates merchant in Live Directory.</li>
+          <li><strong>2. Final On-Hold:</strong> Moves back to Compliance Verification Queue where Compliance must Release On-Hold before returning to Approver to activate.</li>
+          <li><strong>3. Reject:</strong> Rejects with rationale; enters Universal Rejected List across all 3 roles.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>
+      QiPlus Merchant Onboarding Test Suite • Archify Engine v3.0 • Standalone Offline SVG
+    </div>
+    <div>
+      Re-render command: <code>npm run archify:render</code>
+    </div>
+  </footer>
+
+  <script>
+    function loadDiagram(url, element) {
+      document.getElementById('diagram-frame').src = url;
+      document.getElementById('open-standalone').href = url;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (element) {
+        element.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>

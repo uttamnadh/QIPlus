@@ -73,19 +73,7 @@ export class Step7DocumentsPage extends BaseWizardPage {
       }
     }
 
-    // Condition-based wait for warning banner to clear
-    const warning = this.page.locator('text=/mandatory documents still needed/i');
-    await warning.waitFor({ state: 'hidden', timeout: 4000 }).catch(() => {});
-
-    const isWarningVisible = await warning.isVisible({ timeout: 500 }).catch(() => false);
-    if (isWarningVisible) {
-      const warningText = await warning.innerText().catch(() => '');
-      console.log(`[Step 7 Warning] Banner text: "${warningText}"`);
-    } else {
-      console.log(`[Step 7 Success] All mandatory documents uploaded successfully! Warning banner cleared.`);
-    }
-
-    // Ensure Save button is enabled
+    // Wait for Save button to become enabled immediately after file uploads finish
     const saveBtn = this.page.locator('button:has-text("Save & continue"), button:has-text("Save and continue")').first();
     await expect(saveBtn).toBeEnabled({ timeout: 10000 });
   }

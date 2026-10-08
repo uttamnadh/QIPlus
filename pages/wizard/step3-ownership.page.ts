@@ -30,25 +30,12 @@ export class Step3OwnershipPage extends BaseWizardPage {
     tradeLicenceNumber?: string;
     passportNumber?: string;
   }) {
-    // 1. Lightning-fast batch fill for name and shareholding
-    await this.fastFillReact({
-      [`input[name="shareholders.${index}.fullLegalName"]`]: data.fullLegalName,
-      [`input[name="shareholders.${index}.percentShareholding"]`]: data.percentShareholding,
-    });
-
+    // Direct reliable fills
     const nameInp = this.page.getByLabel(/Full legal name/i).nth(index);
-    if (await nameInp.isVisible({ timeout: 200 }).catch(() => false)) {
-      if ((await nameInp.inputValue().catch(() => '')) !== data.fullLegalName) {
-        await nameInp.fill(data.fullLegalName);
-      }
-    }
+    await nameInp.fill(data.fullLegalName);
 
     const pctInp = this.page.getByLabel(/% shareholding/i).nth(index);
-    if (await pctInp.isVisible({ timeout: 200 }).catch(() => false)) {
-      if ((await pctInp.inputValue().catch(() => '')) !== data.percentShareholding) {
-        await pctInp.fill(data.percentShareholding);
-      }
-    }
+    await pctInp.fill(data.percentShareholding);
 
     // 3. Entity / Individual dropdown
     try {

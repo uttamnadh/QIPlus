@@ -51,23 +51,11 @@ export class Step1ProfilePage extends BaseWizardPage {
   async fillPrimaryContactPhone(value: string) {
     const phoneInput = this.page.locator('input[type="tel"]').first();
     if (await phoneInput.isVisible({ timeout: 800 }).catch(() => false)) {
-      await phoneInput.focus().catch(() => {});
-      await phoneInput.click().catch(() => {});
-      await this.page.keyboard.press('Control+A').catch(() => {});
-      await this.page.keyboard.press('Backspace').catch(() => {});
-      await phoneInput.fill('').catch(() => {});
-
       const raw = value.replace(/\D/g, '');
       const digitsToEnter = raw.startsWith('971') ? raw.slice(3) : raw;
-
       await phoneInput.fill(digitsToEnter).catch(async () => {
         await phoneInput.pressSequentially(digitsToEnter, { delay: 0 }).catch(() => {});
       });
-
-      const curVal = await phoneInput.inputValue().catch(() => '');
-      if (!curVal || curVal.replace(/\D/g, '').length < 3) {
-        await phoneInput.pressSequentially(digitsToEnter, { delay: 0 }).catch(() => {});
-      }
     }
   }
 
@@ -201,37 +189,17 @@ export class Step1ProfilePage extends BaseWizardPage {
     data: typeof import('../../fixtures/merchant-data').MERCHANT,
     options?: { vatRegistered?: boolean; vatDocPath?: string }
   ) {
-    // 1. Lightning-fast batch fill for all text inputs via React synthetic events
-    await this.fastFillReact({
-      'profile.tradeName': data.tradeName,
-      'profile.legalName': data.legalName,
-      'profile.websiteUrl': data.websiteUrl,
-      'profile.primaryContactName': data.primaryContactName,
-      'profile.primaryContactPosition': data.primaryContactPosition,
-      'profile.primaryContactEmail': data.primaryContactEmail,
-      'registeredAddress.floorOffice': data.registeredAddress.floorOffice,
-      'registeredAddress.areaDistrict': data.registeredAddress.areaDistrict,
-      'registeredAddress.poBox': data.registeredAddress.poBox,
-      'licence.tradeLicenceNumber': data.licence.number,
-      'licence.activities': data.licence.activities,
-    });
-
-    // Fallback individual fills if not caught by batch
-    const tradeInp = this.page.locator('input[name="profile.tradeName"]').first();
-    if (await tradeInp.isVisible({ timeout: 200 }).catch(() => false)) {
-      if ((await tradeInp.inputValue().catch(() => '')) !== data.tradeName) {
-        await this.fillTradeName(data.tradeName).catch(() => {});
-        await this.fillLegalName(data.legalName).catch(() => {});
-        await this.fillWebsiteUrl(data.websiteUrl).catch(() => {});
-        await this.fillPrimaryContactName(data.primaryContactName).catch(() => {});
-        await this.fillPrimaryContactPosition(data.primaryContactPosition).catch(() => {});
-        await this.fillPrimaryContactEmail(data.primaryContactEmail).catch(() => {});
-        await this.fillFloorOffice(data.registeredAddress.floorOffice).catch(() => {});
-        await this.fillAreaDistrict(data.registeredAddress.areaDistrict).catch(() => {});
-        await this.fillPoBox(data.registeredAddress.poBox).catch(() => {});
-        await this.fillTradeLicenceNumber(data.licence.number).catch(() => {});
-      }
-    }
+    // Direct reliable sequential fills (preventing browser focus collisions)
+    await this.fillTradeName(data.tradeName);
+    await this.fillLegalName(data.legalName);
+    if (data.websiteUrl) await this.fillWebsiteUrl(data.websiteUrl).catch(() => {});
+    await this.fillPrimaryContactName(data.primaryContactName);
+    await this.fillPrimaryContactPosition(data.primaryContactPosition);
+    await this.fillPrimaryContactEmail(data.primaryContactEmail);
+    await this.fillFloorOffice(data.registeredAddress.floorOffice);
+    await this.fillAreaDistrict(data.registeredAddress.areaDistrict);
+    await this.fillPoBox(data.registeredAddress.poBox);
+    await this.fillTradeLicenceNumber(data.licence.number);
 
     // Phone
     await this.fillPrimaryContactPhone(data.primaryContactPhone).catch(() => {});
