@@ -35,6 +35,15 @@ async function globalSetup() {
       `OS.Platform=${process.platform}`,
     ].join('\n');
     fs.writeFileSync(path.join(allureResultsDir, 'environment.properties'), envContent, 'utf-8');
+
+    // Preserve historical trend data across runs
+    const reportHistory = path.join(__dirname, 'allure-report', 'history');
+    const resultsHistory = path.join(allureResultsDir, 'history');
+    if (fs.existsSync(reportHistory)) {
+      try {
+        fs.cpSync(reportHistory, resultsHistory, { recursive: true });
+      } catch {}
+    }
   } catch {}
 
   // 2. Pre-flight VPN & Portal Connectivity Check

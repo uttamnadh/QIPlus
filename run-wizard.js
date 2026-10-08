@@ -66,7 +66,6 @@ function runSingleRecord(recordIndex, totalRecords, shareholderType, isHeaded, m
       HEADED: isHeaded ? 'true' : 'false',
       HEADLESS: isHeaded ? 'false' : 'true',
       BROWSER_CHANNEL: browserChannel || '',
-      ALLURE_SKIP: 'true',
       PLAYWRIGHT_HTML_REPORT: path.join(__dirname, 'playwright-report')
     };
 
