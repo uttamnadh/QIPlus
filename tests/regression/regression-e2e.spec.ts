@@ -403,6 +403,13 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
         finalApproved: false,
       });
       saveRegressionState({ finalApproved: false });
+      saveState({ 
+        finalApproved: false, 
+        onHold: true, 
+        finalApproverDecision: 'Hit / Hold', 
+        screeningResult: isScreeningHit ? 'eMcREY Hit (Flagged for Review)' : 'eMcREY Screening', 
+        merchantStatus: outcomeOnHold ? 'On-hold' : 'Under compliance review' 
+      });
 
       await queue.navigateToApprovalQueue();
       await queue.filterByMRN(targetMRN);
@@ -455,7 +462,13 @@ test.describe.serial('[REG-E2E] Consolidated End-to-End Regression Pipeline (Sin
         finalApproved: true,
       });
       saveRegressionState({ finalApproved: true });
-      saveState({ finalApproved: true });
+      saveState({ 
+        finalApproved: true, 
+        onHold: false, 
+        finalApproverDecision: 'Clear and Active', 
+        screeningResult: 'eMcREY Clear (Low Risk)', 
+        merchantStatus: 'Active' 
+      });
 
       console.log('\n============================================================');
       console.log('🌟 [VS CODE TERMINAL STATUS AUDIT — REGRESSION]');

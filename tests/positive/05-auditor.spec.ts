@@ -51,6 +51,20 @@ test.describe.serial('05 — Auditor verification', () => {
     if (currentState.legalName) {
       expect(rowText.toLowerCase()).toContain(currentState.legalName.toLowerCase());
     }
+
+    let detectedStatus = currentState.merchantStatus;
+    if (/Active/i.test(rowText)) {
+      detectedStatus = 'Active';
+    } else if (/compliance\s+review/i.test(rowText)) {
+      detectedStatus = 'Under compliance review';
+    } else if (/On\s*hold/i.test(rowText)) {
+      detectedStatus = 'On-hold';
+    }
+
+    saveState({ 
+      auditorDirectoryRow: rowText,
+      merchantStatus: detectedStatus
+    });
   });
 
   test('Auditor inspects read-only Merchant Profile audit view', async () => {
@@ -97,13 +111,36 @@ test.describe.serial('05 — Auditor verification', () => {
 
     saveState({ auditorVerified: true });
 
+    // Read latest state to reflect exact Final Approver decision and portal status
+    const latestState = loadState();
+    const isClearAndActive = latestState.finalApproved === true && !latestState.onHold;
+    const finalApproverStatus = latestState.finalApproverDecision || (isClearAndActive ? 'Clear and Active' : 'Hit / Hold');
+    const screeningStatus = latestState.screeningResult || (isClearAndActive ? 'eMcREY Clear (Low Risk)' : 'eMcREY Hit (Flagged for Review)');
+    const statusAudited = isClearAndActive ? 'Clear and Active' : 'Hit / Hold';
+    const recordStatusDisplay = isClearAndActive 
+      ? '🟢 ACTIVE (APPROVED & ACTIVATED)' 
+      : '🟡 ON-HOLD (UNDER COMPLIANCE REVIEW / HIT)';
+    const currentMerchantStatus = latestState.merchantStatus || (isClearAndActive ? 'Active' : 'Under compliance review');
+
     console.log('\n============================================================');
     console.log('🛡️ [POSITIVE] AUDITOR VERIFICATION & AUDIT TRAIL CONFIRMED!');
     console.log(`📄 MRN NUMBER     : ${targetMRN}`);
-    console.log(`🏢 MERCHANT       : ${currentState.legalName || currentState.tradeName || 'N/A'}`);
+    console.log(`🏢 MERCHANT       : ${latestState.legalName || latestState.tradeName || 'N/A'}`);
     console.log(`📊 AUDIT EVENTS   : ${auditRows.length} recorded events`);
-    console.log(`🔍 STATUS AUDITED : Active / Submitted / Reviewed`);
+    console.log(`🎯 FINAL APPROVER : ${finalApproverStatus}`);
+    console.log(`🔍 SCREENING      : ${screeningStatus}`);
+    console.log(`🔍 STATUS AUDITED : ${statusAudited}`);
+    console.log(`📌 RECORD STATUS  : ${recordStatusDisplay}`);
     console.log('✅ COMPLIANCE     : Read-only integrity preserved across all sections');
+    console.log('============================================================');
+    console.log('📋 [AUDIT RECONCILIATION — FINAL APPROVER STATUS]');
+    console.log(`📄 MRN NUMBER     : ${targetMRN}`);
+    console.log(`⚖️ FINAL APPROVER : ${finalApproverStatus}`);
+    console.log(`🔍 STATUS AUDITED : ${statusAudited}`);
+    console.log(`📌 PORTAL STATUS  : ${currentMerchantStatus}`);
+    if (latestState.auditorDirectoryRow) {
+      console.log(`🔍 DIRECTORY ROW  : ${latestState.auditorDirectoryRow}`);
+    }
     console.log('============================================================\n');
   });
 

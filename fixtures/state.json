@@ -1,11 +1,16 @@
 {
   "merchantId": "",
-  "mrn": "60915095648240",
-  "submitted": false,
-  "complianceApproved": false,
-  "tradeName": "Atlas Enterprise 6920",
-  "legalName": "Atlas Enterprise 6920 LLC",
+  "mrn": "61009091038707",
+  "submitted": true,
+  "complianceApproved": true,
+  "tradeName": "Atlas Ventures 1108",
+  "legalName": "Atlas Ventures 1108 LLC",
   "shareholderType": "Individual",
-  "onHold": true,
-  "finalApproved": false
+  "onHold": false,
+  "finalApproved": true,
+  "finalApproverDecision": "Clear and Active",
+  "screeningResult": "eMcREY Clear (Low Risk)",
+  "merchantStatus": "Active",
+  "auditorVerified": true,
+  "auditorDirectoryRow": "61009091038707 Atlas Ventures 1108 LLC Sukesh 09/10/2026 Active"
 }

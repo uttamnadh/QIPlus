@@ -6,7 +6,7 @@ const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>QiPlus Interactive Mermaid Flowchart</title>
+  <title>QiPlus Multi-Role Onboarding & Approval Workflow — Horizontal Flow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,10 +20,10 @@ const htmlContent = `<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 24px;
+      padding: 32px 28px;
     }
     #export-container {
-      width: 1320px;
+      width: 2200px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -32,46 +32,46 @@ const htmlContent = `<!DOCTYPE html>
       width: 100%;
       margin-bottom: 24px;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(56, 189, 248, 0.35);
       border-radius: 16px;
-      padding: 24px 32px;
+      padding: 22px 36px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
     }
     .title-group h1 {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: -0.02em;
       color: #38bdf8;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
     .title-group p {
-      font-size: 13px;
+      font-size: 13.5px;
       color: #94a3b8;
       margin-top: 5px;
     }
     .badge {
-      background: rgba(14, 165, 233, 0.15);
+      background: rgba(14, 165, 233, 0.18);
       color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 6px 16px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      padding: 7px 18px;
       border-radius: 9999px;
       font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
     }
     #diagram-wrap {
       width: 100%;
       background: #090d16;
       border: 1px solid #1e293b;
       border-radius: 18px;
-      padding: 40px 32px;
-      box-shadow: 0 25px 45px -10px rgba(0, 0, 0, 0.8);
+      padding: 36px 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
       display: flex;
       justify-content: center;
     }
@@ -82,7 +82,7 @@ const htmlContent = `<!DOCTYPE html>
     }
     /* Mermaid styling overrides */
     .cluster rect {
-      fill: rgba(15, 23, 42, 0.75) !important;
+      fill: rgba(15, 23, 42, 0.82) !important;
       stroke: #334155 !important;
       stroke-width: 1.5px !important;
       rx: 12px !important;
@@ -96,10 +96,10 @@ const htmlContent = `<!DOCTYPE html>
     .edgeLabel {
       background-color: #030712 !important;
       color: #cbd5e1 !important;
-      font-size: 11.5px !important;
+      font-size: 11px !important;
       padding: 3px 8px !important;
       border-radius: 6px !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
     }
     .node rect, .node circle, .node ellipse, .node polygon {
       rx: 8px !important;
@@ -113,15 +113,15 @@ const htmlContent = `<!DOCTYPE html>
     <div class="header-card">
       <div class="title-group">
         <h1><span>⚡</span> QiPlus Multi-Role Onboarding & Approval Workflow</h1>
-        <p>Interactive Architecture & State Machine: Onboarding Officer ➔ Compliance ➔ eMcREY AML Screening ➔ Final Approver</p>
+        <p>Horizontal Flow: Onboarding Officer (Sukesh) ➔ Compliance Officer (bhanu) ➔ eMcREY AML Screening ➔ Final Approver (uttamnadh) ➔ Universal Registers</p>
       </div>
-      <div class="badge">Verified Workflow Flowchart</div>
+      <div class="badge">Horizontal Flow Architecture</div>
     </div>
 
     <div id="diagram-wrap">
       <div class="mermaid">
-flowchart TD
-    %% Role 1
+flowchart LR
+    %% Role 1: Onboarding Officer
     subgraph R1["ROLE 1: ONBOARDING OFFICER (Sukesh)"]
         direction TB
         NEW_REG["New Registration"] --> STEPS["Fill Steps 1–7<br/>(Profile, Business, UBOs, Bank, Docs)"]
@@ -132,57 +132,67 @@ flowchart TD
         RESUME --> STEP8
     end
 
-    %% Role 2
+    %% Role 2: Compliance Officer
     subgraph R2["ROLE 2: COMPLIANCE OFFICER (bhanu)"]
         direction TB
         COMP_QUEUE["Compliance Verification Queue<br/>Status: 'Submitted'"]
         COMP_HOLD["Compliance 'On-hold' List"]
         COMP_REL["Release from Hold<br/>(Resumes Verification)"]
+        COMP_QUEUE -->|"(Decision 3: Compliance On-Hold)"| COMP_HOLD
         COMP_HOLD --> COMP_REL
-        COMP_REL --> COMP_QUEUE
     end
 
-    %% Role 3: eMcREY
+    %% Role 3: eMcREY AML Screening
     subgraph EMC["eMcREY AML BACKGROUND SCREENING"]
         direction TB
         EMC_SCREEN["eMcREY Background Engine<br/>Watchlist, PEP & Sanctions"]
         EMC_LOCKED["🔒 DECISION LOCKED<br/>• Status: HIT or ON-HOLD<br/>• Notes & buttons disabled<br/>• Approver CANNOT decide"]
         EMC_UNLOCKED["🔓 DECISION UNLOCKED<br/>• Status: CLEAR (Low Risk)<br/>Status: 'Pending Final Approval'"]
+        EMC_SCREEN -->|"[Status: HIT / ON-HOLD]"| EMC_LOCKED
+        EMC_SCREEN -->|"[Status: CLEAR]"| EMC_UNLOCKED
     end
 
-    %% Role 4: Approver
+    %% Role 4: Final Approver
     subgraph R3["ROLE 3: FINAL APPROVER (uttamnadh)"]
         direction TB
         APPR_QUEUE["Final Approval Queue"]
     end
 
-    %% Terminal Registers
+    %% Universal Registers & Terminal States
     subgraph REG["UNIVERSAL REGISTERS & TERMINAL STATES"]
-        direction LR
+        direction TB
         REJ_LIST["UNIVERSAL REJECTED LIST<br/>• Onboarding Officer Portal<br/>• Compliance Officer Portal<br/>• Final Approver Portal"]
         ACTIVE_DIR["STATUS: 'ACTIVE MERCHANT'<br/>• Approved Merchants List<br/>• Global Merchant Search"]
     end
 
-    %% Forward Flow
+    %% R1 to R2 Forward Spine
     STEP8 -->|"Submit (MRN)"| COMP_QUEUE
-    COMP_QUEUE -->|"(Decision 4: Approve & Forward)"| EMC_SCREEN
-    EMC_SCREEN -->|"[Status: CLEAR]"| EMC_UNLOCKED
+
+    %% R2 Internal Release Loopback
+    COMP_QUEUE <-.-|"(Release back to Queue)"| COMP_REL
+
+    %% R2 to EMC: 5 dashes ensure strict LR column separation
+    COMP_QUEUE ----->|"(Decision 4: Approve & Forward)"| EMC_SCREEN
+
+    %% EMC to Final Approver
     EMC_UNLOCKED --> APPR_QUEUE
+
+    %% Final Approver Decision 1: Direct Approve & Activate
     APPR_QUEUE -->|"(Decision 1: Direct Approve & Activate)"| ACTIVE_DIR
 
-    %% Feedback loops reversed in Dagre ranking
+    %% Feedback Loop: Compliance Decision 1 to Onboarding Clarification List
     CLAR_LIST <-.-|"(Decision 1: Return for Clarification)"| COMP_QUEUE
+
+    %% Rejection from Compliance
     COMP_QUEUE -->|"(Decision 2: Reject)"| REJ_LIST
-    COMP_QUEUE -->|"(Decision 3: Compliance On-Hold)"| COMP_HOLD
 
-    %% eMcREY Lock
-    EMC_SCREEN -->|"[Status: HIT / ON-HOLD]"| EMC_LOCKED
-
-    %% Approver Decision Branches
+    %% Feedback Loop: Final Approver Decision 2 to Compliance Release on Hold
     COMP_REL <-.-|"(Decision 2: Final On-Hold) Back to Compliance"| APPR_QUEUE
+
+    %% Rejection from Final Approver
     APPR_QUEUE -->|"(Decision 3: Reject)"| REJ_LIST
 
-    %% Styling classes
+    %% Node Styling
     classDef roleBox fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#fff;
     classDef alertBox fill:#2d1f05,stroke:#f59e0b,stroke-width:2px,color:#fff;
     classDef lockedBox fill:#2b0e11,stroke:#ef4444,stroke-width:2px,color:#fff;
@@ -227,10 +237,10 @@ fs.writeFileSync(standalonePath, htmlContent);
 console.log(`[PASS] Written ${standalonePath}`);
 
 (async () => {
-  console.log('Launching headless Chromium to render high-res Mermaid image...');
+  console.log('Launching headless Chromium to render high-res horizontal Mermaid image...');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({
-    viewport: { width: 1440, height: 1800 },
+    viewport: { width: 2300, height: 1100 },
     deviceScaleFactor: 2 // High DPI retina sharpness
   });
 
@@ -255,5 +265,5 @@ console.log(`[PASS] Written ${standalonePath}`);
   }
 
   await browser.close();
-  console.log('Mermaid image rendering complete!');
+  console.log('Horizontal Mermaid image rendering complete!');
 })();

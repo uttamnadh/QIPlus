@@ -93,7 +93,13 @@ test.describe.serial('04 — Final approval', () => {
     if (!isNotesEditable || isScreeningHit || outcomeOnHold) {
       const statusReason = isScreeningHit ? 'Screening hit (Case opened for compliance review)' : (outcomeOnHold ? 'Outcome: On-hold' : 'Decision notes locked');
       console.log(`[POSITIVE] ⚠️ Record is On-hold / Screening Hit (${statusReason}). Decision cannot be taken.`);
-      saveState({ onHold: true, finalApproved: false });
+      saveState({ 
+        onHold: true, 
+        finalApproved: false,
+        finalApproverDecision: 'Hit / Hold',
+        screeningResult: isScreeningHit ? 'eMcREY Hit (Flagged for Review)' : (outcomeOnHold ? 'eMcREY On-hold' : 'Decision notes locked'),
+        merchantStatus: outcomeOnHold ? 'On-hold' : 'Under compliance review'
+      });
       test.info().annotations.push({
         type: 'info',
         description: `MRN ${targetMRN} is in ${statusReason}; decision cannot be taken.`
@@ -104,7 +110,13 @@ test.describe.serial('04 — Final approval', () => {
     // Screening is CLEAR: Write decision notes and approve to Active
     console.log(`[Final Approval] ✅ Screening is CLEAR. Writing decision notes and approving MRN ${targetMRN}...`);
     await queue.approveMerchant('Final approval and merchant activation granted after eMcREY AML verification. Verified by Bhanu Kiran.');
-    saveState({ finalApproved: true, onHold: false });
+    saveState({ 
+      finalApproved: true, 
+      onHold: false,
+      finalApproverDecision: 'Clear and Active',
+      screeningResult: 'eMcREY Clear (Low Risk)',
+      merchantStatus: 'Active'
+    });
   });
 
   test('Without logout: Check merchant status (Active or On-hold), then LOGOUT', async () => {
@@ -121,6 +133,14 @@ test.describe.serial('04 — Final approval', () => {
       const isRowVisible = await row.isVisible({ timeout: 3000 }).catch(() => false);
       const rowText = isRowVisible ? await row.innerText().catch(() => '') : `MRN: ${targetMRN} (Under compliance review)`;
 
+      saveState({
+        onHold: true,
+        finalApproved: false,
+        finalApproverDecision: 'Hit / Hold',
+        screeningResult: 'eMcREY Hit (Flagged for Compliance Review)',
+        merchantStatus: 'Under compliance review'
+      });
+
       console.log('\n============================================================');
       console.log('⚠️ [VS CODE TERMINAL STATUS AUDIT — FINAL APPROVER]');
       console.log(`📄 MRN NUMBER    : ${targetMRN}`);
@@ -134,6 +154,14 @@ test.describe.serial('04 — Final approval', () => {
       console.log(`[Final Approval] Verifying merchant ${targetMRN} is Active in directory...`);
       const isActive = await queue.verifyMerchantActive(targetMRN);
       expect(isActive, `Merchant ${targetMRN} should be verified as Active`).toBe(true);
+
+      saveState({
+        finalApproved: true,
+        onHold: false,
+        finalApproverDecision: 'Clear and Active',
+        screeningResult: 'eMcREY Clear (Low Risk)',
+        merchantStatus: 'Active'
+      });
 
       console.log('\n============================================================');
       console.log('🌟 [VS CODE TERMINAL STATUS AUDIT — FINAL APPROVER]');

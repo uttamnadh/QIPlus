@@ -237,7 +237,11 @@ export interface PipelineState {
   complianceApproved: boolean;
   onHold?: boolean;
   finalApproved?: boolean;
+  finalApproverDecision?: string; // 'Clear and Active' | 'Hit / Hold'
+  screeningResult?: string;
+  merchantStatus?: string; // 'Active' | 'Under compliance review' | 'On hold'
   auditorVerified?: boolean;
+  auditorDirectoryRow?: string;
 }
 
 /** Save MRN and status flags to disk to persist across test process runs. */

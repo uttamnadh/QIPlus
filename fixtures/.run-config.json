@@ -1,5 +1,6 @@
 {
-  "shareholderType": "Alternate",
-  "recordCount": 6,
-  "timestamp": 1789455387044
+  "shareholderType": "Individual",
+  "recordCount": 1,
+  "maxStep": 8,
+  "timestamp": 1791526219081
 }

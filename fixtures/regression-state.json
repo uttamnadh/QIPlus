@@ -1,11 +1,13 @@
 {
-  "mrn": "60910113712305",
+  "mrn": "61009084438977",
+  "finalApproved": true,
   "records": [
     {
-      "mrn": "60910113712305",
-      "tradeName": "Nova International 3957",
-      "legalName": "Nova International 3957 LLC",
-      "shareholderType": "Individual"
+      "mrn": "61009084438977",
+      "tradeName": "Orion International 1432",
+      "legalName": "Orion International 1432 LLC",
+      "shareholderType": "Individual",
+      "submitted": true
     }
   ]
 }
